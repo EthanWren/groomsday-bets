@@ -770,24 +770,24 @@ function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-function Card({ className = "", children }: { className?: string; children?: React.ReactNode }) {
-  return <div className={cx("gb-card", className)}>{children}</div>;
+function Card({ className = "", children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div {...props} className={cx("gb-card", className)}>{children}</div>;
 }
 
-function CardHeader({ className = "", children }: { className?: string; children?: React.ReactNode }) {
-  return <div className={className}>{children}</div>;
+function CardHeader({ className = "", children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div {...props} className={className}>{children}</div>;
 }
 
-function CardTitle({ className = "", children }: { className?: string; children?: React.ReactNode }) {
-  return <div className={className}>{children}</div>;
+function CardTitle({ className = "", children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div {...props} className={className}>{children}</div>;
 }
 
-function CardContent({ className = "", children }: { className?: string; children?: React.ReactNode }) {
-  return <div className={className}>{children}</div>;
+function CardContent({ className = "", children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div {...props} className={className}>{children}</div>;
 }
 
-function Badge({ className = "", children }: { className?: string; children?: React.ReactNode }) {
-  return <span className={cx("gb-badge", className)}>{children}</span>;
+function Badge({ className = "", children, ...props }: React.HTMLAttributes<HTMLSpanElement>) {
+  return <span {...props} className={cx("gb-badge", className)}>{children}</span>;
 }
 
 function Input({ className = "", ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
