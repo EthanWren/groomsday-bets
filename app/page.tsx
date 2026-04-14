@@ -100,9 +100,20 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "default" | "outline";
 };
 
-const supabaseUrl = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined;
-const supabaseAnonKey = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY : undefined;
-const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
+const supabaseUrl =
+  typeof process !== "undefined"
+    ? process.env.NEXT_PUBLIC_SUPABASE_URL
+    : undefined;
+
+const supabasePublishableKey =
+  typeof process !== "undefined"
+    ? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    : undefined;
+
+const supabase =
+  supabaseUrl && supabasePublishableKey
+    ? createClient(supabaseUrl, supabasePublishableKey)
+    : null;
 
 const DRAFT_KEY = "groomsday_betting_draft_v7";
 const NAME_KEY = "groomsday_last_bettor_name_v1";
