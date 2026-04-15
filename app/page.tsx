@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
 import { createClient } from "@supabase/supabase-js";
+import { Inter, Cormorant_Garamond } from "next/font/google";
 import {
   Trophy,
   User,
@@ -110,6 +111,17 @@ type BridalPartyMeta = {
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "default" | "outline" | "soft";
 };
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
+
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  variable: "--font-cormorant",
+});
 
 const supabaseUrl = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined;
 const supabasePublishableKey = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY : undefined;
@@ -357,7 +369,7 @@ const styles = `
     min-height: 100vh;
     color: var(--stone-900);
     background: radial-gradient(circle at top, rgba(251, 207, 232, 0.58), transparent 32%), linear-gradient(180deg, #fff9f8 0%, #faf7f6 100%);
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
 
   .gb-app button,
@@ -366,7 +378,7 @@ const styles = `
   }
 
   .gb-serif {
-    font-family: Iowan Old Style, Palatino Linotype, Book Antiqua, Georgia, serif;
+    font-family: var(--font-cormorant), Iowan Old Style, Palatino Linotype, Book Antiqua, Georgia, serif;
   }
 
   .lucide-small {
@@ -476,10 +488,11 @@ const styles = `
   .gb-micro { color: var(--stone-500); }
 
   .gb-title {
-    margin: 6px 0 0;
-    font-size: 31px;
-    line-height: 0.98;
-    font-weight: 700;
+    margin: 4px 0 0;
+    font-size: 33px;
+    line-height: 0.94;
+    font-weight: 600;
+    letter-spacing: -0.01em;
     color: var(--stone-900);
   }
 
@@ -489,7 +502,7 @@ const styles = `
   .gb-empty-body,
   .gb-soft-muted { color: var(--stone-500); }
 
-  .gb-subtitle { margin: 6px 0 0; font-size: 13px; }
+  .gb-subtitle { margin: 4px 0 0; font-size: 13px; line-height: 1.45; }
   .gb-helper { margin: 6px 0 0; font-size: 12px; }
   .gb-empty-body { margin: 6px 0 0; font-size: 14px; }
 
@@ -522,6 +535,21 @@ const styles = `
     flex: 0 0 42px;
     font-size: 16px;
     font-weight: 800;
+  }
+
+  .gb-bridal-avatar--phoebe {
+    background: linear-gradient(180deg, var(--rose-100) 0%, var(--rose-75) 100%);
+    color: var(--rose-900);
+  }
+
+  .gb-bridal-avatar--sophie {
+    background: linear-gradient(180deg, var(--mauve-100) 0%, #faf5ff 100%);
+    color: var(--mauve-700);
+  }
+
+  .gb-bridal-avatar--emma {
+    background: linear-gradient(180deg, var(--sage-50) 0%, #fbfdf9 100%);
+    color: var(--sage-700);
   }
 
   .gb-banner,
@@ -957,6 +985,24 @@ const styles = `
     font-size: 13px;
     font-weight: 700;
     color: var(--stone-900);
+    line-height: 1.4;
+  }
+
+  .gb-bridal-name {
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  .gb-bridal-role {
+    margin-top: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--stone-500);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
   }
 
   .gb-hot-grid {
@@ -1160,6 +1206,12 @@ function getBridalPartyMeta(name: string): BridalPartyMeta | null {
   return BRIDAL_PARTY.find((person) => normalized.includes(person.key)) || null;
 }
 
+function getBridalPartyIcon(person: BridalPartyMeta): IconComponent {
+  if (person.key === "phoebe") return Crown;
+  if (person.key === "sophie") return Sparkles;
+  return Heart;
+}
+
 function normalizeSlipSignature(selections: Selection[]) {
   return selections.map((selection) => `${selection.marketId}:${selection.option}`).sort().join("|");
 }
@@ -1305,14 +1357,26 @@ function BridalPartyCard({
   bet: StoredBet | null;
   onTail: (bet: StoredBet) => void;
 }) {
+  const RoleIcon = getBridalPartyIcon(person);
+
   return (
     <div className={cx("gb-bridal-card gb-stack-2", bet && "gb-bridal-card--active")}>
       <div className="gb-between">
         <div className="gb-row gb-col">
-          <div className="gb-bridal-avatar">{person.display.charAt(0)}</div>
+          <div className={cx(
+            "gb-bridal-avatar",
+            person.key === "phoebe" && "gb-bridal-avatar--phoebe",
+            person.key === "sophie" && "gb-bridal-avatar--sophie",
+            person.key === "emma" && "gb-bridal-avatar--emma"
+          )}>
+            <RoleIcon className="lucide-small" />
+          </div>
           <div className="gb-col">
-            <div style={{ fontSize: 15, fontWeight: 800 }}>{person.display}</div>
-            <div className="gb-micro" style={{ marginTop: 4 }}>{person.role}</div>
+            <div className="gb-bridal-name">{person.display}</div>
+            <div className="gb-bridal-role">
+              <RoleIcon className="lucide-small" />
+              <span>{person.role}</span>
+            </div>
           </div>
         </div>
         <Badge className={bet ? "gb-badge--rose" : "gb-badge--stone"}>{bet ? "Slip lodged" : "Awaiting slip"}</Badge>
@@ -1752,7 +1816,7 @@ export default function GroomsdayBettingApp() {
   }
 
   return (
-    <div className="gb-app">
+    <div className={cx(inter.variable, cormorant.variable, "gb-app")}>
       <style>{styles}</style>
 
       <div className="gb-topbar gb-serif">Wedding Specials</div>
@@ -1804,7 +1868,7 @@ export default function GroomsdayBettingApp() {
               </div>
               <div className="gb-category-toggle-copy">
                 <div className="gb-section-kicker">Bridal Party Picks</div>
-                <div className="gb-category-toggle-title">Watch the inner circle</div>
+                <div className="gb-category-toggle-title gb-serif">Watch the inner circle</div>
                 <div className="gb-market-meta">{bridalPartyCount}/3 slips lodged • tap to {bridalHomeOpen ? "hide" : "view"}</div>
               </div>
             </div>
