@@ -238,6 +238,19 @@ const BASE_MARKETS: Market[] = [
     ],
   },
   {
+    id: "ceremony_weather",
+    title: "Weather at the time of ceremony",
+    category: "Ceremony",
+    icon: Sparkles,
+    options: [
+      { label: "Sunny", baseOdds: "$1.75" },
+      { label: "Partly cloudy", baseOdds: "$2.30" },
+      { label: "Overcast", baseOdds: "$4.20" },
+      { label: "Windy", baseOdds: "$5.50" },
+      { label: "Light rain", baseOdds: "$8.00" },
+    ],
+  },
+  {
     id: "bridesmaid_height",
     title: "Bridesmaid in heels to be taller than Joseph Bianco",
     category: "Ceremony",
@@ -272,6 +285,7 @@ const BASE_MARKETS: Market[] = [
     options: [
       { label: "Beer", baseOdds: "$2.10" },
       { label: "Champagne", baseOdds: "$2.30" },
+      { label: "Energy drink", baseOdds: "$3.40" },
       { label: "Whisky", baseOdds: "$4.80" },
       { label: "Water like a pro", baseOdds: "$10.00" },
     ],
@@ -540,8 +554,8 @@ const styles = `
   }
 
   .gb-bridal-avatar--phoebe {
-    background: linear-gradient(180deg, var(--rose-100) 0%, var(--rose-75) 100%);
-    color: var(--rose-900);
+    background: linear-gradient(180deg, var(--rose-900) 0%, var(--rose-800) 100%);
+    color: var(--white);
   }
 
   .gb-bridal-avatar--sophie {
@@ -1167,11 +1181,10 @@ function buildSelectionsText(selections: Selection[]) {
 }
 
 function buildSelectionsContextText(selections: Selection[], limit = 3) {
-  if (!selections?.length) return "No slip yet";
+  if (!selections?.length) return [];
   return selections
     .slice(0, limit)
-    .map((selection) => `${selection.marketTitle}: ${selection.option}`)
-    .join(" • ");
+    .map((selection) => `${selection.marketTitle}: ${selection.option}`);
 }
 
 function getMarketCounts(bets: StoredBet[], marketId: string) {
@@ -1928,7 +1941,13 @@ export default function GroomsdayBettingApp() {
             <div className="gb-hot-card gb-stack-1">
               <div className="gb-label">Popular multi</div>
               <div style={{ fontSize: 14, fontWeight: 700 }}>
-                {popularCombo ? popularCombo.label : "No repeat multi yet"}
+                {popularCombo ? (
+                  popularCombo.label.map((line, index) => (
+                    <div key={`combo-line-${index}`}>{line}</div>
+                  ))
+                ) : (
+                  "No repeat multi yet"
+                )}
               </div>
               <div className="gb-helper" style={{ margin: 0 }}>
                 {popularCombo ? `Backed ${popularCombo.count} times` : "The field is still finding its read"}
