@@ -15,6 +15,8 @@ import {
   Mic2,
   Martini,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Sparkles,
   Receipt,
   Trash2,
@@ -38,9 +40,11 @@ import {
  *
  * Required environment variables:
  * - NEXT_PUBLIC_SUPABASE_URL
- * - NEXT_PUBLIC_SUPABASE_ANON_KEY
+ * - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
  *
  * Supabase table:
+ * create extension if not exists pgcrypto;
+ *
  * create table public.wedding_bets (
  *   id uuid primary key default gen_random_uuid(),
  *   bettor_name text not null,
@@ -96,28 +100,21 @@ type Market = {
 
 type GroupedMarkets = Record<string, Market[]>;
 
+type CelebrityMeta = {
+  label: string;
+};
+
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "default" | "outline";
 };
 
-const supabaseUrl =
-  typeof process !== "undefined"
-    ? process.env.NEXT_PUBLIC_SUPABASE_URL
-    : undefined;
+const supabaseUrl = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined;
+const supabasePublishableKey = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY : undefined;
+const supabase = supabaseUrl && supabasePublishableKey ? createClient(supabaseUrl, supabasePublishableKey) : null;
 
-const supabasePublishableKey =
-  typeof process !== "undefined"
-    ? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-    : undefined;
-
-const supabase =
-  supabaseUrl && supabasePublishableKey
-    ? createClient(supabaseUrl, supabasePublishableKey)
-    : null;
-
-const DRAFT_KEY = "groomsday_betting_draft_v7";
+const DRAFT_KEY = "groomsday_betting_draft_v8";
 const NAME_KEY = "groomsday_last_bettor_name_v1";
-const DRIFT_STRENGTH = 0.65;
+const DRIFT_STRENGTH = 0.42;
 
 const BASE_MARKETS: Market[] = [
   {
@@ -283,31 +280,38 @@ const BASE_MARKETS: Market[] = [
 
 const styles = `
   :root {
+    --rose-25: #fff8fb;
     --rose-50: #fff1f5;
+    --rose-75: #ffecf2;
     --rose-100: #ffe4ec;
+    --rose-150: #ffd7e4;
     --rose-200: #fecdd8;
     --rose-300: #f9a8d4;
     --rose-700: #be185d;
     --rose-800: #9d174d;
     --rose-900: #831843;
-    --sky-100: #e0f2fe;
-    --sky-800: #075985;
-    --emerald-50: #ecfdf5;
-    --emerald-300: #6ee7b7;
-    --emerald-600: #059669;
+    --mauve-100: #f4ecf7;
+    --mauve-300: #dbc7e9;
+    --mauve-700: #7e4d9e;
+    --sage-50: #f4f7f3;
+    --sage-200: #d7e3d2;
+    --sage-700: #4d6b55;
+    --stone-25: #fdfcfb;
     --stone-50: #fafaf9;
     --stone-100: #f5f5f4;
+    --stone-150: #efecea;
     --stone-200: #e7e5e4;
+    --stone-300: #d6d3d1;
     --stone-400: #a8a29e;
     --stone-500: #78716c;
     --stone-700: #44403c;
     --stone-900: #1c1917;
     --white: #ffffff;
-    --shadow-lg: 0 14px 32px rgba(28, 25, 23, 0.08);
-    --shadow-xl: 0 22px 48px rgba(28, 25, 23, 0.14);
-    --radius-xl: 18px;
-    --radius-2xl: 24px;
-    --radius-3xl: 28px;
+    --shadow-lg: 0 12px 28px rgba(28, 25, 23, 0.07);
+    --shadow-xl: 0 18px 42px rgba(28, 25, 23, 0.11);
+    --radius-xl: 16px;
+    --radius-2xl: 22px;
+    --radius-3xl: 26px;
   }
 
   * { box-sizing: border-box; }
@@ -315,7 +319,28 @@ const styles = `
   .gb-app {
     min-height: 100vh;
     color: var(--stone-900);
-    background: radial-gradient(circle at top, rgba(251, 207, 232, 0.65), transparent 30%), linear-gradient(180deg, #fff7f5 0%, #f8fafc 100%);
+    background: radial-gradient(circle at top, rgba(251, 207, 232, 0.58), transparent 32%), linear-gradient(180deg, #fff9f8 0%, #faf7f6 100%);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .gb-app button,
+  .gb-app input {
+    font: inherit;
+  }
+
+  .gb-serif {
+    font-family: Iowan Old Style, Palatino Linotype, Book Antiqua, Georgia, serif;
+  }
+
+  .lucide-small {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+  }
+
+  .lucide-icon {
+    width: 22px;
+    height: 22px;
   }
 
   .gb-topbar {
@@ -325,58 +350,59 @@ const styles = `
     padding: 10px 16px;
     text-align: center;
     text-transform: uppercase;
-    letter-spacing: 0.3em;
-    font-size: 11px;
-    font-weight: 900;
+    letter-spacing: 0.34em;
+    font-size: 10px;
+    font-weight: 800;
     color: var(--rose-900);
-    background: var(--rose-100);
+    background: rgba(255, 234, 242, 0.9);
     border-bottom: 1px solid var(--rose-200);
     box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(10px);
   }
 
   .gb-page {
-    max-width: 440px;
+    max-width: 430px;
     margin: 0 auto;
     min-height: 100vh;
-    padding: 16px 16px 140px;
+    padding: 14px 14px calc(124px + env(safe-area-inset-bottom, 0px));
   }
 
-  .gb-stack-1 > * + * { margin-top: 8px; }
-  .gb-stack-2 > * + * { margin-top: 12px; }
-  .gb-stack-3 > * + * { margin-top: 16px; }
-  .gb-stack-4 > * + * { margin-top: 20px; }
+  .gb-stack-1 > * + * { margin-top: 6px; }
+  .gb-stack-2 > * + * { margin-top: 10px; }
+  .gb-stack-3 > * + * { margin-top: 14px; }
+  .gb-stack-4 > * + * { margin-top: 18px; }
 
   .gb-card,
   .gb-hero,
   .gb-history-card,
-  .gb-empty,
   .gb-slip-panel,
   .gb-latest,
-  .gb-confirm {
-    background: rgba(255, 255, 255, 0.88);
+  .gb-confirm,
+  .gb-empty {
+    background: rgba(255, 255, 255, 0.9);
     border: 1px solid var(--stone-200);
     border-radius: var(--radius-3xl);
     box-shadow: var(--shadow-xl);
-    padding: 16px;
-    backdrop-filter: blur(6px);
+    padding: 14px;
+    backdrop-filter: blur(8px);
   }
 
   .gb-latest {
-    background: var(--rose-50);
+    background: linear-gradient(180deg, rgba(255, 241, 245, 0.96) 0%, rgba(255, 248, 251, 0.96) 100%);
     border-color: var(--rose-200);
   }
 
   .gb-row {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
   }
 
   .gb-between {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
   }
 
   .gb-grid-2 {
@@ -385,45 +411,41 @@ const styles = `
     gap: 8px;
   }
 
-  .gb-grid-3 {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-  }
-
   .gb-col { min-width: 0; }
 
   .gb-eyebrow,
   .gb-label,
   .gb-category,
-  .gb-micro {
+  .gb-micro,
+  .gb-section-kicker {
     text-transform: uppercase;
-    letter-spacing: 0.2em;
-    font-size: 11px;
+    letter-spacing: 0.18em;
+    font-size: 10px;
   }
 
-  .gb-eyebrow { color: var(--rose-700); font-weight: 700; }
+  .gb-eyebrow,
+  .gb-section-kicker { color: var(--rose-700); font-weight: 700; }
   .gb-label,
   .gb-category,
   .gb-micro { color: var(--stone-500); }
 
   .gb-title {
-    margin: 8px 0 0;
-    font-size: 34px;
-    line-height: 0.95;
-    font-weight: 900;
+    margin: 6px 0 0;
+    font-size: 31px;
+    line-height: 0.98;
+    font-weight: 700;
+    color: var(--stone-900);
   }
 
   .gb-subtitle,
   .gb-helper,
   .gb-muted,
-  .gb-empty-body {
-    color: var(--stone-500);
-  }
+  .gb-empty-body,
+  .gb-soft-muted { color: var(--stone-500); }
 
-  .gb-subtitle { margin: 8px 0 0; font-size: 14px; }
-  .gb-helper { margin: 8px 0 0; font-size: 12px; }
-  .gb-empty-body { margin: 8px 0 0; font-size: 14px; }
+  .gb-subtitle { margin: 6px 0 0; font-size: 13px; }
+  .gb-helper { margin: 6px 0 0; font-size: 12px; }
+  .gb-empty-body { margin: 6px 0 0; font-size: 14px; }
 
   .gb-iconbox,
   .gb-marketicon {
@@ -431,20 +453,20 @@ const styles = `
     align-items: center;
     justify-content: center;
     border-radius: var(--radius-xl);
-    background: var(--rose-50);
+    background: linear-gradient(180deg, var(--rose-50) 0%, var(--rose-75) 100%);
     color: var(--rose-700);
   }
 
   .gb-iconbox {
-    width: 48px;
-    height: 48px;
-    flex: 0 0 48px;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
   }
 
   .gb-marketicon {
-    width: 40px;
-    height: 40px;
-    flex: 0 0 40px;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
   }
 
   .gb-banner,
@@ -459,14 +481,15 @@ const styles = `
   .gb-input,
   .gb-oddsbox,
   .gb-toast,
-  .gb-success {
+  .gb-success,
+  .gb-category-toggle {
     border: 1px solid var(--stone-200);
     border-radius: var(--radius-2xl);
   }
 
   .gb-banner,
   .gb-softbox {
-    background: var(--rose-50);
+    background: linear-gradient(180deg, var(--rose-50) 0%, var(--rose-25) 100%);
     border-color: var(--rose-200);
     color: var(--rose-900);
     padding: 12px;
@@ -474,35 +497,36 @@ const styles = `
 
   .gb-banner {
     text-align: center;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
   }
 
   .gb-statsbox {
-    background: var(--stone-50);
-    padding: 12px;
+    background: linear-gradient(180deg, var(--stone-50) 0%, var(--stone-25) 100%);
+    padding: 10px;
     text-align: center;
   }
 
   .gb-stat-number {
     margin-top: 4px;
-    font-size: 24px;
-    font-weight: 900;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--stone-900);
   }
 
   .gb-ticker {
     overflow: hidden;
     background: rgba(255, 255, 255, 0.7);
-    border-color: rgba(244, 114, 182, 0.28);
+    border-color: rgba(190, 24, 93, 0.16);
     box-shadow: var(--shadow-lg);
   }
 
   .gb-ticker-track {
     display: flex;
-    gap: 24px;
+    gap: 18px;
     white-space: nowrap;
-    padding: 12px 16px;
-    font-size: 14px;
+    padding: 10px 14px;
+    font-size: 13px;
     color: var(--rose-900);
   }
 
@@ -512,7 +536,7 @@ const styles = `
     justify-content: center;
     gap: 6px;
     padding: 6px 10px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     line-height: 1;
   }
@@ -520,27 +544,28 @@ const styles = `
   .gb-badge--rose { background: var(--rose-100); color: var(--rose-900); border-color: var(--rose-200); }
   .gb-badge--stone { background: var(--stone-100); color: var(--stone-500); }
   .gb-badge--white { background: var(--white); color: var(--rose-900); }
-  .gb-badge--selected { background: var(--rose-50); color: var(--rose-900); border-color: var(--rose-200); }
+  .gb-badge--selected { background: linear-gradient(180deg, var(--rose-50) 0%, var(--rose-25) 100%); color: var(--rose-900); border-color: var(--rose-200); }
   .gb-badge--movement-in { background: var(--rose-100); color: var(--rose-800); border-color: var(--rose-200); }
-  .gb-badge--movement-out { background: var(--sky-100); color: var(--sky-800); border-color: #bae6fd; }
+  .gb-badge--movement-out { background: var(--mauve-100); color: var(--mauve-700); border-color: var(--mauve-300); }
   .gb-badge--movement-flat { background: var(--stone-100); color: var(--stone-700); }
+  .gb-badge--success { background: var(--sage-50); color: var(--sage-700); border-color: var(--sage-200); }
 
   .gb-tabbar {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
     padding: 4px;
     background: rgba(255, 255, 255, 0.82);
   }
 
   .gb-tab {
     border: 0;
-    border-radius: 16px;
+    border-radius: 15px;
     background: transparent;
     color: var(--stone-500);
     font-size: 14px;
     font-weight: 600;
-    padding: 12px;
+    padding: 10px 8px;
     cursor: pointer;
   }
 
@@ -551,7 +576,7 @@ const styles = `
 
   .gb-input {
     width: 100%;
-    height: 48px;
+    height: 46px;
     padding: 0 14px;
     background: var(--stone-50);
     color: var(--stone-900);
@@ -561,13 +586,37 @@ const styles = `
   }
 
   .gb-input::placeholder { color: var(--stone-400); }
-  .gb-input:focus { border-color: var(--rose-300); box-shadow: 0 0 0 3px rgba(244, 114, 182, 0.12); }
+  .gb-input:focus { border-color: var(--rose-300); box-shadow: 0 0 0 3px rgba(244, 114, 182, 0.1); }
+
+  .gb-category-toggle {
+    width: 100%;
+    padding: 11px 12px;
+    background: rgba(255, 255, 255, 0.74);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+  }
+
+  .gb-category-toggle-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+  }
+
+  .gb-category-toggle-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--stone-900);
+  }
 
   .gb-option {
     width: 100%;
     border: 1px solid var(--stone-200);
-    background: var(--white);
-    padding: 14px;
+    background: linear-gradient(180deg, var(--white) 0%, var(--stone-25) 100%);
+    padding: 12px;
     text-align: left;
     cursor: pointer;
     transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, background 140ms ease;
@@ -575,61 +624,82 @@ const styles = `
 
   .gb-option:active { transform: scale(0.99); }
   .gb-option:hover { box-shadow: var(--shadow-lg); }
+
   .gb-option--active {
     border-color: var(--rose-300);
-    background: var(--rose-50);
+    background: linear-gradient(180deg, var(--rose-50) 0%, var(--rose-25) 100%);
+    box-shadow: 0 0 0 1px rgba(190, 24, 93, 0.08), var(--shadow-lg);
   }
 
   .gb-option--flash {
-    border-color: var(--emerald-300);
-    background: var(--emerald-50);
+    border-color: var(--sage-200);
+    background: linear-gradient(180deg, var(--sage-50) 0%, var(--white) 100%);
   }
 
   .gb-option-copy {
     min-width: 0;
-    padding-right: 8px;
+    padding-right: 6px;
+  }
+
+  .gb-option-title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
   }
 
   .gb-option-title {
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.4;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.32;
+    color: var(--stone-900);
+    flex: 1 1 auto;
+  }
+
+  .gb-checkmark {
+    color: var(--rose-700);
+    flex: 0 0 auto;
+    margin-top: 1px;
   }
 
   .gb-movement-row {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
     margin-top: 6px;
-    font-size: 11px;
+    font-size: 10px;
     color: var(--stone-500);
+  }
+
+  .gb-opened-subtle {
+    font-size: 10px;
+    color: var(--stone-400);
   }
 
   .gb-oddsbox {
     flex: 0 0 auto;
-    min-width: 92px;
+    min-width: 84px;
     text-align: center;
-    padding: 10px 12px;
+    padding: 8px 10px;
     font-weight: 700;
   }
 
   .gb-oddsbox--in { background: var(--rose-100); border-color: var(--rose-200); color: var(--rose-900); }
-  .gb-oddsbox--out { background: var(--sky-100); border-color: #bae6fd; color: var(--sky-800); }
+  .gb-oddsbox--out { background: var(--mauve-100); border-color: var(--mauve-300); color: var(--mauve-700); }
   .gb-oddsbox--flat { background: var(--stone-100); border-color: var(--stone-200); color: var(--stone-900); }
 
   .gb-odds-main {
-    font-size: 20px;
-    font-weight: 900;
+    font-size: 18px;
+    font-weight: 800;
     line-height: 1;
   }
 
   .gb-odds-sub {
     margin-top: 4px;
-    font-size: 10px;
+    font-size: 9px;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    letter-spacing: 0.12em;
-    opacity: 0.7;
+    color: var(--stone-400);
   }
 
   .gb-selection-scroll {
@@ -639,12 +709,12 @@ const styles = `
     padding-bottom: 2px;
   }
 
-  .gb-section-gap { margin-top: 16px; }
-  .gb-category-wrap { padding: 0 4px; }
+  .gb-section-gap { margin-top: 14px; }
+  .gb-category-wrap { padding: 0 2px; }
 
   .gb-leg {
-    background: var(--stone-50);
-    padding: 12px;
+    background: linear-gradient(180deg, var(--stone-50) 0%, var(--stone-25) 100%);
+    padding: 10px 12px;
   }
 
   .gb-fixedbar {
@@ -653,24 +723,25 @@ const styles = `
     right: 0;
     bottom: 0;
     z-index: 40;
-    padding: 0 16px 16px;
+    padding: 0 14px calc(10px + env(safe-area-inset-bottom, 0px));
     pointer-events: none;
   }
 
   .gb-fixedbar-inner {
-    max-width: 440px;
+    max-width: 430px;
     margin: 0 auto;
     pointer-events: auto;
   }
 
   .gb-slip-panel {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.96);
+    padding: 12px;
   }
 
   .gb-button-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: 10px;
   }
 
   .gb-button {
@@ -680,9 +751,9 @@ const styles = `
     gap: 8px;
     border-radius: var(--radius-2xl);
     border: 1px solid var(--stone-200);
-    min-height: 48px;
-    padding: 12px 14px;
-    font-size: 16px;
+    min-height: 46px;
+    padding: 10px 14px;
+    font-size: 15px;
     font-weight: 700;
     cursor: pointer;
     transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
@@ -691,7 +762,7 @@ const styles = `
   .gb-button:hover { box-shadow: var(--shadow-lg); }
   .gb-button:active { transform: scale(0.99); }
   .gb-button:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
-  .gb-button--default { background: var(--rose-100); color: var(--rose-900); }
+  .gb-button--default { background: linear-gradient(180deg, var(--rose-100) 0%, var(--rose-150) 100%); color: var(--rose-900); }
   .gb-button--outline { background: var(--white); color: var(--stone-900); }
 
   .gb-confirm {
@@ -701,30 +772,30 @@ const styles = `
   }
 
   .gb-confirm-banner {
-    background: var(--rose-100);
+    background: linear-gradient(180deg, var(--rose-100) 0%, var(--rose-75) 100%);
     color: var(--rose-900);
     padding: 10px 12px;
     border-radius: var(--radius-2xl);
     text-align: center;
     text-transform: uppercase;
-    letter-spacing: 0.2em;
-    font-size: 11px;
-    font-weight: 900;
+    letter-spacing: 0.18em;
+    font-size: 10px;
+    font-weight: 800;
   }
 
   .gb-slip-code {
-    background: var(--rose-100);
+    background: linear-gradient(180deg, var(--rose-100) 0%, var(--rose-75) 100%);
     color: var(--rose-900);
     border-radius: var(--radius-xl);
-    padding: 10px 12px;
-    font-size: 12px;
+    padding: 9px 11px;
+    font-size: 11px;
     font-weight: 700;
   }
 
   .gb-history-actions {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 10px;
   }
 
   .gb-empty {
@@ -742,43 +813,68 @@ const styles = `
 
   .gb-toast {
     left: 50%;
-    bottom: 96px;
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
     transform: translateX(-50%);
     padding: 10px 14px;
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .gb-success {
-    top: 96px;
+    top: 92px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 18px;
+    padding: 12px 16px;
     color: var(--rose-900);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
   }
 
-  .gb-hidden-mobile-gap { margin-top: 16px; }
+  .gb-market-meta {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--stone-500);
+  }
 
   @media (max-width: 420px) {
-    .gb-page { padding-left: 12px; padding-right: 12px; }
-    .gb-fixedbar { padding-left: 12px; padding-right: 12px; }
-    .gb-title { font-size: 30px; }
-    .gb-option {
-      padding: 12px;
+    .gb-page {
+      padding-left: 12px;
+      padding-right: 12px;
+      padding-bottom: calc(122px + env(safe-area-inset-bottom, 0px));
     }
+
+    .gb-fixedbar {
+      padding-left: 12px;
+      padding-right: 12px;
+    }
+
+    .gb-title {
+      font-size: 28px;
+    }
+
+    .gb-option {
+      padding: 11px;
+    }
+
     .gb-oddsbox {
-      min-width: 82px;
-      padding: 8px 10px;
+      min-width: 76px;
+      padding: 7px 9px;
+    }
+
+    .gb-odds-main {
+      font-size: 17px;
     }
   }
 `;
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
+}
+
+function formatTicketCount(count: number) {
+  return `${count} ${count === 1 ? "ticket" : "tickets"} taken`;
 }
 
 function Card({ className = "", children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
@@ -797,8 +893,8 @@ function CardContent({ className = "", children, ...props }: React.HTMLAttribute
   return <div {...props} className={className}>{children}</div>;
 }
 
-function Badge({ className = "", children, ...props }: React.HTMLAttributes<HTMLSpanElement>) {
-  return <span {...props} className={cx("gb-badge", className)}>{children}</span>;
+function Badge({ className = "", children }: { className?: string; children?: React.ReactNode }) {
+  return <span className={cx("gb-badge", className)}>{children}</span>;
 }
 
 function Input({ className = "", ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
@@ -865,8 +961,18 @@ function calcCombinedOdds(selections: Selection[]) {
 }
 
 function buildSelectionsText(selections: Selection[]) {
-  if (!selections?.length) return "No bets yet";
+  if (!selections?.length) return "Build your slip to get started";
   return selections.map((selection) => selection.option).join(" • ");
+}
+
+function getCelebrityMeta(name: string): CelebrityMeta | null {
+  const normalized = name.toLowerCase().trim();
+
+  if (normalized.includes("phoebe")) return { label: "Bride" };
+  if (normalized.includes("sophie")) return { label: "Maid of Honour" };
+  if (normalized.includes("emma")) return { label: "Mother of Bride" };
+
+  return null;
 }
 
 function getMarketCounts(bets: StoredBet[], marketId: string) {
@@ -931,7 +1037,7 @@ if (typeof window !== "undefined") {
 function MarqueeTicker({ bets }: { bets: StoredBet[] }) {
   const items = bets.length
     ? bets.map((bet) => `${bet.bettor_name} locked in ${bet.bet_type}: ${buildSelectionsText(bet.selections)}`)
-    : ["No bets placed yet."];
+    : ["No bets locked in yet."];
 
   const doubled = [...items, ...items];
 
@@ -940,11 +1046,11 @@ function MarqueeTicker({ bets }: { bets: StoredBet[] }) {
       <motion.div
         className="gb-ticker-track"
         animate={{ x: ["0%", "-50%"] }}
-        transition={{ repeat: Infinity, ease: "linear", duration: 24 }}
+        transition={{ repeat: Infinity, ease: "linear", duration: 26 }}
       >
         {doubled.map((item, index) => (
           <div key={`${item}-${index}`} className="gb-row">
-            <Badge className="gb-badge--rose">LIVE ACTION</Badge>
+            <Badge className="gb-badge--rose">Locked in</Badge>
             <span>{item}</span>
           </div>
         ))}
@@ -980,11 +1086,12 @@ function SelectionCard({
     >
       <div className="gb-between">
         <div className="gb-option-copy">
-          <div className="gb-option-title">{title}</div>
+          <div className="gb-option-title-row">
+            <div className="gb-option-title">{title}</div>
+            {active ? <CheckCircle2 className="lucide-small gb-checkmark" /> : null}
+          </div>
           <div className="gb-movement-row">
-            <span>
-              {tickets} ticket{tickets === 1 ? "" : "s"}
-            </span>
+            <span>{tickets === 1 ? "1 ticket" : `${tickets} tickets`}</span>
             <Badge
               className={cx(
                 movement.direction === "in" && "gb-badge--movement-in",
@@ -995,7 +1102,8 @@ function SelectionCard({
               <MovementIcon className="lucide-small" />
               {movement.label}
             </Badge>
-            {flash ? <span style={{ color: "var(--emerald-600)" }}>Added to slip</span> : null}
+            <span className="gb-opened-subtle">Opened {baseOdds}</span>
+            {flash ? <Badge className="gb-badge--success">Added</Badge> : null}
           </div>
         </div>
         <div
@@ -1007,7 +1115,7 @@ function SelectionCard({
           )}
         >
           <div className="gb-odds-main">{odds}</div>
-          <div className="gb-odds-sub">Opened {baseOdds}</div>
+          <div className="gb-odds-sub">Now paying</div>
         </div>
       </div>
     </button>
@@ -1016,7 +1124,7 @@ function SelectionCard({
 
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
-    <div className="gb-empty">
+    <div className="gb-empty gb-stack-1">
       <div style={{ fontSize: 18, fontWeight: 700 }}>{title}</div>
       <div className="gb-empty-body">{body}</div>
     </div>
@@ -1024,15 +1132,23 @@ function EmptyState({ title, body }: { title: string; body: string }) {
 }
 
 function LatestLockedCard({ bet }: { bet: StoredBet | null }) {
-  if (!bet) return null;
+  if (!bet) {
+    return (
+      <div className="gb-latest gb-stack-1">
+        <div className="gb-eyebrow">Latest locked in</div>
+        <div style={{ fontSize: 16, fontWeight: 700 }}>No bets locked in yet</div>
+        <div className="gb-empty-body">The first slip will appear here.</div>
+      </div>
+    );
+  }
 
   return (
     <div className="gb-latest">
       <div className="gb-between">
         <div className="gb-col">
           <div className="gb-eyebrow">Latest locked in</div>
-          <div style={{ marginTop: 8, fontSize: 18, fontWeight: 900 }}>{bet.bettor_name}</div>
-          <div style={{ marginTop: 8, fontSize: 14, color: "var(--rose-900)" }}>{buildSelectionsText(bet.selections)}</div>
+          <div style={{ marginTop: 8, fontSize: 18, fontWeight: 800 }}>{bet.bettor_name}</div>
+          <div style={{ marginTop: 6, fontSize: 14, color: "var(--rose-900)" }}>{buildSelectionsText(bet.selections)}</div>
         </div>
         <Badge className="gb-badge--white">{calcCombinedOdds(bet.selections || [])}</Badge>
       </div>
@@ -1048,7 +1164,7 @@ const SlipPreview = React.forwardRef<HTMLDivElement, { bet: StoredBet }>(({ bet 
       <div className="gb-between">
         <div className="gb-col">
           <div className="gb-eyebrow">Bet confirmed</div>
-          <div style={{ marginTop: 8, fontSize: 28, fontWeight: 900 }}>Betting On The Wedding</div>
+          <div className="gb-title gb-serif" style={{ fontSize: 28, marginTop: 8 }}>Betting On The Wedding</div>
           <div className="gb-subtitle">No real money. Very real bragging rights.</div>
         </div>
         <div className="gb-slip-code">{bet.slip_code}</div>
@@ -1058,11 +1174,11 @@ const SlipPreview = React.forwardRef<HTMLDivElement, { bet: StoredBet }>(({ bet 
         <div className="gb-between">
           <div>
             <div className="gb-label">Bettor</div>
-            <div style={{ marginTop: 4, fontSize: 18, fontWeight: 700 }}>{bet.bettor_name}</div>
+            <div style={{ marginTop: 4, fontSize: 17, fontWeight: 700 }}>{bet.bettor_name}</div>
           </div>
           <div style={{ textAlign: "right" }}>
             <div className="gb-label">Type</div>
-            <div style={{ marginTop: 4, fontSize: 18, fontWeight: 700, textTransform: "capitalize" }}>{bet.bet_type}</div>
+            <div style={{ marginTop: 4, fontSize: 17, fontWeight: 700, textTransform: "capitalize" }}>{bet.bet_type}</div>
           </div>
         </div>
         <div className="gb-between" style={{ fontSize: 14 }}>
@@ -1102,7 +1218,7 @@ export default function GroomsdayBettingApp() {
   const [bets, setBets] = useState<StoredBet[]>([]);
   const [name, setName] = useState("");
   const [selections, setSelections] = useState<Selection[]>([]);
-  const [activeView, setActiveView] = useState<"build" | "confirmed" | "history">("build");
+  const [activeView, setActiveView] = useState<"build" | "confirmed" | "history" | "celebrity">("build");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [latestBet, setLatestBet] = useState<StoredBet | null>(null);
@@ -1110,6 +1226,7 @@ export default function GroomsdayBettingApp() {
   const [toast, setToast] = useState("");
   const [flashKey, setFlashKey] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
   const slipRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -1200,7 +1317,7 @@ export default function GroomsdayBettingApp() {
 
     if (!supabase) {
       if (showLoading) setLoading(false);
-      setToast("Add Supabase env vars to enable shared cross-device bets");
+      setToast("Supabase is not connected yet");
       return;
     }
 
@@ -1244,6 +1361,13 @@ export default function GroomsdayBettingApp() {
     setToast("Slip cleared");
   }
 
+  function toggleCategory(category: string) {
+    setCollapsedCategories((prev) => ({
+      ...prev,
+      [category]: !prev[category],
+    }));
+  }
+
   const betType: BetType = selections.length <= 1 ? "single" : "multi";
   const combinedOdds = calcCombinedOdds(selections);
 
@@ -1251,6 +1375,10 @@ export default function GroomsdayBettingApp() {
     if (!lookupName.trim()) return [];
     return bets.filter((bet) => bet.bettor_name.toLowerCase().trim() === lookupName.toLowerCase().trim());
   }, [lookupName, bets]);
+
+  const celebrityBets = useMemo(() => {
+    return bets.filter((bet) => !!getCelebrityMeta(bet.bettor_name));
+  }, [bets]);
 
   async function submitBet() {
     if (!name.trim()) {
@@ -1264,7 +1392,7 @@ export default function GroomsdayBettingApp() {
     }
 
     if (!supabase) {
-      setToast("Shared cross-device saving needs Supabase connected");
+      setToast("Supabase is not connected yet");
       return;
     }
 
@@ -1322,15 +1450,15 @@ export default function GroomsdayBettingApp() {
     <div className="gb-app">
       <style>{styles}</style>
 
-      <div className="gb-topbar">Wedding Specials</div>
+      <div className="gb-topbar gb-serif">Wedding Specials</div>
 
       <div className="gb-page gb-stack-3">
         <div className="gb-hero gb-stack-2">
           <div className="gb-between">
             <div className="gb-col">
-              <div className="gb-eyebrow">Groomsday</div>
-              <div className="gb-title">Betting On The Wedding</div>
-              <div className="gb-subtitle">Build your bet slip and lock it in.</div>
+              <div className="gb-section-kicker">Groomsday</div>
+              <div className="gb-title gb-serif">Betting On The Wedding</div>
+              <div className="gb-subtitle">Bragging rights edition. Build your slip and lock it in.</div>
             </div>
             <div className="gb-iconbox">
               <Ticket className="lucide-icon" />
@@ -1355,15 +1483,16 @@ export default function GroomsdayBettingApp() {
 
         <MarqueeTicker bets={bets.slice(0, 14)} />
 
-        <div className="gb-tabbar">
+        <div className="gb-tabbar" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
           {[
             { key: "build", label: "Build" },
             { key: "confirmed", label: "Slip" },
             { key: "history", label: "History" },
+            { key: "celebrity", label: "Celebrity" },
           ].map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveView(tab.key as "build" | "confirmed" | "history")}
+              onClick={() => setActiveView(tab.key as "build" | "confirmed" | "history" | "celebrity")}
               className={cx("gb-tab", activeView === tab.key && "gb-tab--active")}
             >
               {tab.label}
@@ -1376,7 +1505,7 @@ export default function GroomsdayBettingApp() {
             <motion.div key="build" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="gb-stack-3">
               <Card>
                 <CardHeader>
-                  <CardTitle className="gb-row" style={{ fontSize: 18, fontWeight: 700 }}>
+                  <CardTitle className="gb-row" style={{ fontSize: 17, fontWeight: 700 }}>
                     <div className="gb-marketicon">
                       <User className="lucide-small" />
                     </div>
@@ -1391,7 +1520,7 @@ export default function GroomsdayBettingApp() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="gb-row" style={{ fontSize: 18, fontWeight: 700 }}>
+                  <CardTitle className="gb-row" style={{ fontSize: 17, fontWeight: 700 }}>
                     <div className="gb-marketicon">
                       <Receipt className="lucide-small" />
                     </div>
@@ -1400,19 +1529,19 @@ export default function GroomsdayBettingApp() {
                 </CardHeader>
                 <CardContent className="gb-stack-2">
                   <div className="gb-row">
-                    <Badge className={cx(activeView === "build" && betType === "single" ? "gb-badge--rose" : "gb-badge--stone")}>Single</Badge>
-                    <Badge className={cx(activeView === "build" && betType === "multi" ? "gb-badge--rose" : "gb-badge--stone")}>Multi</Badge>
+                    <Badge className={betType === "single" ? "gb-badge--rose" : "gb-badge--stone"}>Single</Badge>
+                    <Badge className={betType === "multi" ? "gb-badge--rose" : "gb-badge--stone"}>Multi</Badge>
                   </div>
 
                   <div className="gb-softbox gb-stack-2" style={{ background: "var(--stone-50)", borderColor: "var(--stone-200)", color: "var(--stone-900)" }}>
                     <div className="gb-between">
                       <div>
                         <div className="gb-label">Bet type</div>
-                        <div style={{ marginTop: 4, fontSize: 18, fontWeight: 700, textTransform: "capitalize" }}>{betType}</div>
+                        <div style={{ marginTop: 4, fontSize: 17, fontWeight: 700, textTransform: "capitalize" }}>{betType}</div>
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <div className="gb-label">Combined odds</div>
-                        <div style={{ marginTop: 4, fontSize: 18, fontWeight: 700, color: "var(--rose-900)" }}>{combinedOdds}</div>
+                        <div style={{ marginTop: 4, fontSize: 17, fontWeight: 700, color: "var(--rose-900)" }}>{combinedOdds}</div>
                       </div>
                     </div>
                   </div>
@@ -1430,61 +1559,71 @@ export default function GroomsdayBettingApp() {
                         </Badge>
                       ))
                     ) : (
-                      <div className="gb-muted" style={{ fontSize: 14 }}>No selections yet</div>
+                      <div className="gb-muted" style={{ fontSize: 14 }}>Build your slip to get started</div>
                     )}
                   </div>
                 </CardContent>
               </Card>
 
-              {Object.entries(groupedMarkets).map(([category, categoryMarkets]) => (
-                <div key={category} className="gb-stack-3">
-                  <div className="gb-category-wrap">
-                    <div className="gb-category">{category}</div>
+              {Object.entries(groupedMarkets).map(([category, categoryMarkets]) => {
+                const isCollapsed = !!collapsedCategories[category];
+                const totalCategoryMarkets = categoryMarkets.length;
+
+                return (
+                  <div key={category} className="gb-stack-2">
+                    <button className="gb-category-toggle" onClick={() => toggleCategory(category)}>
+                      <div className="gb-category-toggle-left">
+                        <div className="gb-category">Section</div>
+                        <div className="gb-category-toggle-title">{category}</div>
+                        <div className="gb-market-meta">{totalCategoryMarkets} market{totalCategoryMarkets === 1 ? "" : "s"}</div>
+                      </div>
+                      {isCollapsed ? <ChevronDown className="lucide-small" /> : <ChevronUp className="lucide-small" />}
+                    </button>
+
+                    {!isCollapsed ? categoryMarkets.map((market, idx) => {
+                      const Icon = market.icon;
+                      const selectedCount = selections.filter((item) => item.marketId === market.id).length;
+                      const marketTickets = market.options.reduce((sum, option) => sum + (option.tickets || 0), 0);
+
+                      return (
+                        <Card key={market.id}>
+                          <CardHeader>
+                            <CardTitle className="gb-between">
+                              <div className="gb-row gb-col">
+                                <div className="gb-marketicon">
+                                  <Icon className="lucide-small" />
+                                </div>
+                                <div className="gb-col">
+                                  <div className="gb-label">{category} • Market {idx + 1}</div>
+                                  <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700, lineHeight: 1.25 }}>{market.title}</div>
+                                </div>
+                              </div>
+                              <div style={{ textAlign: "right" }}>
+                                {selectedCount > 0 ? <Badge className="gb-badge--selected">{selectedCount} selected</Badge> : null}
+                                <div className="gb-micro" style={{ marginTop: 8 }}>{formatTicketCount(marketTickets)}</div>
+                              </div>
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="gb-stack-2">
+                            {market.options.map((option) => (
+                              <SelectionCard
+                                key={option.label}
+                                active={isSelected(market.id, option.label)}
+                                flash={flashKey === `${market.id}-${option.label}`}
+                                onClick={() => toggleSelection(market, option)}
+                                title={option.label}
+                                odds={option.odds || option.baseOdds}
+                                baseOdds={option.baseOdds}
+                                tickets={option.tickets || 0}
+                              />
+                            ))}
+                          </CardContent>
+                        </Card>
+                      );
+                    }) : null}
                   </div>
-
-                  {categoryMarkets.map((market, idx) => {
-                    const Icon = market.icon;
-                    const selectedCount = selections.filter((item) => item.marketId === market.id).length;
-                    const marketTickets = market.options.reduce((sum, option) => sum + (option.tickets || 0), 0);
-
-                    return (
-                      <Card key={market.id}>
-                        <CardHeader>
-                          <CardTitle className="gb-between">
-                            <div className="gb-row gb-col">
-                              <div className="gb-marketicon">
-                                <Icon className="lucide-small" />
-                              </div>
-                              <div className="gb-col">
-                                <div className="gb-label">{category} market {idx + 1}</div>
-                                <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700 }}>{market.title}</div>
-                              </div>
-                            </div>
-                            <div style={{ textAlign: "right" }}>
-                              {selectedCount > 0 ? <Badge className="gb-badge--selected">{selectedCount} in slip</Badge> : null}
-                              <div className="gb-micro" style={{ marginTop: 8 }}>{marketTickets} tickets taken</div>
-                            </div>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="gb-stack-2">
-                          {market.options.map((option) => (
-                            <SelectionCard
-                              key={option.label}
-                              active={isSelected(market.id, option.label)}
-                              flash={flashKey === `${market.id}-${option.label}`}
-                              onClick={() => toggleSelection(market, option)}
-                              title={option.label}
-                              odds={option.odds || option.baseOdds}
-                              baseOdds={option.baseOdds}
-                              tickets={option.tickets || 0}
-                            />
-                          ))}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              ))}
+                );
+              })}
             </motion.div>
           )}
 
@@ -1513,7 +1652,7 @@ export default function GroomsdayBettingApp() {
                   </div>
                 </>
               ) : (
-                <EmptyState title="No confirmed slip yet" body="Place a bet from the Build tab first." />
+                <EmptyState title="No confirmed slip yet" body="Build your slip first, then lock it in." />
               )}
             </motion.div>
           )}
@@ -1522,7 +1661,7 @@ export default function GroomsdayBettingApp() {
             <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="gb-stack-3">
               <Card>
                 <CardHeader>
-                  <CardTitle style={{ fontSize: 18, fontWeight: 700 }}>Find submitted bets</CardTitle>
+                  <CardTitle style={{ fontSize: 17, fontWeight: 700 }}>Find submitted bets</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Input value={lookupName} onChange={(e) => setLookupName(e.target.value)} placeholder="Enter your name" />
@@ -1530,7 +1669,7 @@ export default function GroomsdayBettingApp() {
               </Card>
 
               {loading ? (
-                <EmptyState title="Loading bets" body="Pulling shared slips from the cloud." />
+                <EmptyState title="Loading bets" body="Pulling locked slips from the cloud." />
               ) : myBets.length ? (
                 myBets.map((bet) => (
                   <div key={bet.id || bet.slip_code} className="gb-history-card gb-stack-2">
@@ -1568,6 +1707,64 @@ export default function GroomsdayBettingApp() {
               )}
             </motion.div>
           )}
+
+          {activeView === "celebrity" && (
+            <motion.div key="celebrity" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="gb-stack-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle style={{ fontSize: 17, fontWeight: 700 }}>Celebrity Bets</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="gb-helper">Featured slips from the wedding inner circle.</div>
+                </CardContent>
+              </Card>
+
+              {loading ? (
+                <EmptyState title="Loading celebrity bets" body="Pulling featured slips from the cloud." />
+              ) : celebrityBets.length ? (
+                celebrityBets.map((bet) => {
+                  const celebrityMeta = getCelebrityMeta(bet.bettor_name);
+
+                  return (
+                    <div key={`celebrity-${bet.id || bet.slip_code}`} className="gb-history-card gb-stack-2">
+                      <div className="gb-between">
+                        <div className="gb-col">
+                          <div className="gb-row" style={{ gap: 8, flexWrap: "wrap" }}>
+                            <div style={{ fontSize: 14, fontWeight: 700 }}>{bet.bettor_name}</div>
+                            {celebrityMeta ? <Badge className="gb-badge--rose">{celebrityMeta.label}</Badge> : null}
+                          </div>
+                          <div className="gb-micro" style={{ marginTop: 6 }}>
+                            {bet.bet_type} • {formatTime(bet.created_at)}
+                          </div>
+                        </div>
+                        <Badge className="gb-badge--selected">{calcCombinedOdds(bet.selections || [])}</Badge>
+                      </div>
+
+                      <div className="gb-softbox gb-stack-1">
+                        <div className="gb-label" style={{ color: "var(--rose-700)" }}>Selections</div>
+                        <div style={{ fontSize: 14 }}>{buildSelectionsText(bet.selections)}</div>
+                      </div>
+
+                      <div className="gb-stack-2">
+                        {(bet.selections || []).map((item, index) => (
+                          <div key={`${bet.slip_code}-celeb-${index}`} className="gb-leg gb-stack-1">
+                            <div className="gb-label">Leg {index + 1}</div>
+                            <div style={{ fontSize: 14, fontWeight: 600 }}>{item.marketTitle}</div>
+                            <div className="gb-between">
+                              <div style={{ fontSize: 14, color: "var(--rose-900)" }}>{item.option}</div>
+                              <div className="gb-muted" style={{ fontSize: 14 }}>{item.odds}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <EmptyState title="No celebrity bets yet" body="Once Phoebe, Sophie, or Emma lock in a slip, it will show here." />
+              )}
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
@@ -1577,7 +1774,7 @@ export default function GroomsdayBettingApp() {
             <div className="gb-between">
               <div>
                 <div className="gb-label">Bet slip</div>
-                <div style={{ marginTop: 4, fontSize: 14, fontWeight: 700 }}>
+                <div style={{ marginTop: 4, fontSize: 13, fontWeight: 700 }}>
                   {selections.length} leg{selections.length === 1 ? "" : "s"} • {betType}
                 </div>
               </div>
@@ -1598,9 +1795,9 @@ export default function GroomsdayBettingApp() {
       <AnimatePresence>
         {showSuccess ? (
           <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 12 }}
+            initial={{ opacity: 0, scale: 0.88, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 12 }}
+            exit={{ opacity: 0, scale: 0.95, y: 12 }}
             className="gb-success"
           >
             <CheckCircle2 className="lucide-small" />
