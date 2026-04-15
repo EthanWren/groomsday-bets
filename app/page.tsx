@@ -1619,7 +1619,7 @@ export default function GroomsdayBettingApp() {
   }, [lookupName, bets]);
 
   const popularCombo = useMemo(() => {
-    const combos = new Map<string, { label: string; count: number }>();
+    const combos = new Map<string, { label: string[]; count: number }>();
 
     bets.filter((bet) => bet.bet_type === "multi").forEach((bet) => {
       const signature = normalizeSlipSignature(bet.selections || []);
