@@ -26,14 +26,14 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Minus,
+  Music4,
+  Flame,
+  Copy,
+  Users,
 } from "lucide-react";
 
 /**
  * No-Tailwind deployment notes
- *
- * Recommended stack:
- * - Next.js
- * - Plain CSS in app/globals.css or a CSS module
  *
  * Install:
  * npm install framer-motion html2canvas @supabase/supabase-js lucide-react
@@ -42,7 +42,7 @@ import {
  * - NEXT_PUBLIC_SUPABASE_URL
  * - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
  *
- * Supabase table:
+ * Supabase setup SQL:
  * create extension if not exists pgcrypto;
  *
  * create table public.wedding_bets (
@@ -95,26 +95,35 @@ type Market = {
   title: string;
   category: string;
   icon: IconComponent;
+  spotlight?: boolean;
   options: MarketOption[];
 };
 
 type GroupedMarkets = Record<string, Market[]>;
 
-type CelebrityMeta = {
-  label: string;
+type BridalPartyMeta = {
+  key: string;
+  display: string;
+  role: string;
 };
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "default" | "outline";
+  variant?: "default" | "outline" | "soft";
 };
 
 const supabaseUrl = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined;
 const supabasePublishableKey = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY : undefined;
 const supabase = supabaseUrl && supabasePublishableKey ? createClient(supabaseUrl, supabasePublishableKey) : null;
 
-const DRAFT_KEY = "groomsday_betting_draft_v8";
+const DRAFT_KEY = "groomsday_betting_draft_v9";
 const NAME_KEY = "groomsday_last_bettor_name_v1";
 const DRIFT_STRENGTH = 0.42;
+
+const BRIDAL_PARTY: BridalPartyMeta[] = [
+  { key: "phoebe", display: "Phoebe", role: "Bride" },
+  { key: "sophie", display: "Sophie", role: "Maid of Honour" },
+  { key: "emma", display: "Emma", role: "Mother of Bride" },
+];
 
 const BASE_MARKETS: Market[] = [
   {
@@ -122,6 +131,7 @@ const BASE_MARKETS: Market[] = [
     title: "Free Tile: Phoebe's dress colour",
     category: "Opening Lines",
     icon: Crown,
+    spotlight: true,
     options: [
       { label: "White", baseOdds: "$1.01" },
       { label: "Any Other Colour", baseOdds: "$101.00" },
@@ -132,12 +142,13 @@ const BASE_MARKETS: Market[] = [
     title: "Phoebe's last name after the ceremony",
     category: "Opening Lines",
     icon: Crown,
+    spotlight: true,
     options: [
       { label: "Phoebe Grech-Wren", baseOdds: "$1.70" },
       { label: "Phoebe Grech", baseOdds: "$2.60" },
       { label: "Phoebe Wren", baseOdds: "$4.20" },
-      { label: "Phoebe Wrench", baseOdds: "$8.50" },
       { label: "Any other name", baseOdds: "$21.00" },
+      { label: "Phoebe Wrench", baseOdds: "$41.00" },
     ],
   },
   {
@@ -145,6 +156,7 @@ const BASE_MARKETS: Market[] = [
     title: "Who does Zeus greet first?",
     category: "Opening Lines",
     icon: PawPrint,
+    spotlight: true,
     options: [
       { label: "Ethan", baseOdds: "$1.65" },
       { label: "Phoebe", baseOdds: "$2.10" },
@@ -166,7 +178,7 @@ const BASE_MARKETS: Market[] = [
   },
   {
     id: "tears",
-    title: "Most likely to cry during their speech",
+    title: "Cries during their speech",
     category: "Speeches",
     icon: Sparkles,
     options: [
@@ -215,15 +227,30 @@ const BASE_MARKETS: Market[] = [
     ],
   },
   {
+    id: "bridesmaid_height",
+    title: "Bridesmaid in heels to be taller than Joseph Bianco",
+    category: "Ceremony",
+    icon: Users,
+    spotlight: true,
+    options: [
+      { label: "No Bridesmaid to be taller than Joseph", baseOdds: "$1.55" },
+      { label: "Jesse", baseOdds: "$2.10" },
+      { label: "Morgan", baseOdds: "$3.20" },
+      { label: "Sophie", baseOdds: "$5.50" },
+      { label: "Angie", baseOdds: "$8.50" },
+      { label: "All Bridesmaids", baseOdds: "$21.00" },
+    ],
+  },
+  {
     id: "cake_flavour",
     title: "What flavour is the cake?",
     category: "Reception",
     icon: Trophy,
     options: [
-      { label: "Red velvet", baseOdds: "$1.35" },
-      { label: "Vanilla", baseOdds: "$3.20" },
-      { label: "Chocolate", baseOdds: "$3.60" },
-      { label: "Lemon", baseOdds: "$5.00" },
+      { label: "Chocolate", baseOdds: "$1.60" },
+      { label: "Red velvet", baseOdds: "$2.20" },
+      { label: "Vanilla", baseOdds: "$3.60" },
+      { label: "Lemon", baseOdds: "$5.40" },
     ],
   },
   {
@@ -242,7 +269,7 @@ const BASE_MARKETS: Market[] = [
     id: "first_dancefloor_person",
     title: "Who hits the dancefloor first?",
     category: "Dancefloor",
-    icon: Sparkles,
+    icon: Music4,
     options: [
       { label: "Bridal party member", baseOdds: "$1.95" },
       { label: "Bride", baseOdds: "$2.60" },
@@ -277,6 +304,16 @@ const BASE_MARKETS: Market[] = [
     ],
   },
 ];
+
+const CATEGORY_ICONS: Record<string, IconComponent> = {
+  "Opening Lines": Crown,
+  Speeches: Mic2,
+  Ceremony: Heart,
+  Reception: Martini,
+  Dancefloor: Music4,
+};
+
+const UNIQUE_CATEGORIES = Array.from(new Set(BASE_MARKETS.map((market) => market.category)));
 
 const styles = `
   :root {
@@ -364,7 +401,7 @@ const styles = `
     max-width: 430px;
     margin: 0 auto;
     min-height: 100vh;
-    padding: 14px 14px calc(124px + env(safe-area-inset-bottom, 0px));
+    padding: 14px 14px calc(126px + env(safe-area-inset-bottom, 0px));
   }
 
   .gb-stack-1 > * + * { margin-top: 6px; }
@@ -378,7 +415,9 @@ const styles = `
   .gb-slip-panel,
   .gb-latest,
   .gb-confirm,
-  .gb-empty {
+  .gb-empty,
+  .gb-bridal-card,
+  .gb-hot-card {
     background: rgba(255, 255, 255, 0.9);
     border: 1px solid var(--stone-200);
     border-radius: var(--radius-3xl);
@@ -387,7 +426,8 @@ const styles = `
     backdrop-filter: blur(8px);
   }
 
-  .gb-latest {
+  .gb-latest,
+  .gb-bridal-card--active {
     background: linear-gradient(180deg, rgba(255, 241, 245, 0.96) 0%, rgba(255, 248, 251, 0.96) 100%);
     border-color: var(--rose-200);
   }
@@ -408,6 +448,12 @@ const styles = `
   .gb-grid-2 {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .gb-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
   }
 
@@ -448,7 +494,8 @@ const styles = `
   .gb-empty-body { margin: 6px 0 0; font-size: 14px; }
 
   .gb-iconbox,
-  .gb-marketicon {
+  .gb-marketicon,
+  .gb-bridal-avatar {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -469,6 +516,14 @@ const styles = `
     flex: 0 0 36px;
   }
 
+  .gb-bridal-avatar {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    font-size: 16px;
+    font-weight: 800;
+  }
+
   .gb-banner,
   .gb-softbox,
   .gb-statsbox,
@@ -482,13 +537,16 @@ const styles = `
   .gb-oddsbox,
   .gb-toast,
   .gb-success,
-  .gb-category-toggle {
+  .gb-category-toggle,
+  .gb-story,
+  .gb-chip-button {
     border: 1px solid var(--stone-200);
     border-radius: var(--radius-2xl);
   }
 
   .gb-banner,
-  .gb-softbox {
+  .gb-softbox,
+  .gb-story {
     background: linear-gradient(180deg, var(--rose-50) 0%, var(--rose-25) 100%);
     border-color: var(--rose-200);
     color: var(--rose-900);
@@ -501,7 +559,8 @@ const styles = `
     font-weight: 700;
   }
 
-  .gb-statsbox {
+  .gb-statsbox,
+  .gb-hot-card {
     background: linear-gradient(180deg, var(--stone-50) 0%, var(--stone-25) 100%);
     padding: 10px;
     text-align: center;
@@ -549,10 +608,11 @@ const styles = `
   .gb-badge--movement-out { background: var(--mauve-100); color: var(--mauve-700); border-color: var(--mauve-300); }
   .gb-badge--movement-flat { background: var(--stone-100); color: var(--stone-700); }
   .gb-badge--success { background: var(--sage-50); color: var(--sage-700); border-color: var(--sage-200); }
+  .gb-badge--spotlight { background: var(--stone-900); color: var(--white); border-color: var(--stone-900); }
 
   .gb-tabbar {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
     padding: 4px;
     background: rgba(255, 255, 255, 0.82);
@@ -563,9 +623,9 @@ const styles = `
     border-radius: 15px;
     background: transparent;
     color: var(--stone-500);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
-    padding: 10px 8px;
+    padding: 10px 6px;
     cursor: pointer;
   }
 
@@ -588,6 +648,12 @@ const styles = `
   .gb-input::placeholder { color: var(--stone-400); }
   .gb-input:focus { border-color: var(--rose-300); box-shadow: 0 0 0 3px rgba(244, 114, 182, 0.1); }
 
+  .gb-story-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
   .gb-category-toggle {
     width: 100%;
     padding: 11px 12px;
@@ -601,9 +667,17 @@ const styles = `
 
   .gb-category-toggle-left {
     display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .gb-category-toggle-copy {
+    display: flex;
     flex-direction: column;
     gap: 4px;
-    text-align: left;
+    min-width: 0;
   }
 
   .gb-category-toggle-title {
@@ -709,8 +783,19 @@ const styles = `
     padding-bottom: 2px;
   }
 
-  .gb-section-gap { margin-top: 14px; }
-  .gb-category-wrap { padding: 0 2px; }
+  .gb-chip-button {
+    background: linear-gradient(180deg, var(--rose-50) 0%, var(--rose-25) 100%);
+    border-color: var(--rose-200);
+    color: var(--rose-900);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .gb-chip-button:hover { box-shadow: var(--shadow-lg); }
 
   .gb-leg {
     background: linear-gradient(180deg, var(--stone-50) 0%, var(--stone-25) 100%);
@@ -736,11 +821,24 @@ const styles = `
   .gb-slip-panel {
     background: rgba(255, 255, 255, 0.96);
     padding: 12px;
+    transition: box-shadow 160ms ease, transform 160ms ease;
   }
 
-  .gb-button-row {
+  .gb-slip-panel--pulse {
+    box-shadow: 0 0 0 1px rgba(190, 24, 93, 0.12), var(--shadow-xl);
+    transform: translateY(-2px);
+  }
+
+  .gb-button-row,
+  .gb-action-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .gb-bridal-buttons {
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 10px;
   }
 
@@ -751,9 +849,9 @@ const styles = `
     gap: 8px;
     border-radius: var(--radius-2xl);
     border: 1px solid var(--stone-200);
-    min-height: 46px;
+    min-height: 44px;
     padding: 10px 14px;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     cursor: pointer;
     transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
@@ -764,6 +862,7 @@ const styles = `
   .gb-button:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
   .gb-button--default { background: linear-gradient(180deg, var(--rose-100) 0%, var(--rose-150) 100%); color: var(--rose-900); }
   .gb-button--outline { background: var(--white); color: var(--stone-900); }
+  .gb-button--soft { background: linear-gradient(180deg, var(--stone-50) 0%, var(--stone-25) 100%); color: var(--stone-900); }
 
   .gb-confirm {
     background: var(--white);
@@ -792,7 +891,8 @@ const styles = `
     font-weight: 700;
   }
 
-  .gb-history-actions {
+  .gb-history-actions,
+  .gb-bridal-grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: 10px;
@@ -838,11 +938,42 @@ const styles = `
     color: var(--stone-500);
   }
 
+  .gb-bridal-card {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gb-bridal-card::after {
+    content: "";
+    position: absolute;
+    inset: auto -18% -44px auto;
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, rgba(249, 168, 212, 0.2), transparent 68%);
+    pointer-events: none;
+  }
+
+  .gb-bridal-status {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--stone-900);
+  }
+
+  .gb-hot-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .gb-hot-card {
+    text-align: left;
+  }
+
   @media (max-width: 420px) {
     .gb-page {
       padding-left: 12px;
       padding-right: 12px;
-      padding-bottom: calc(122px + env(safe-area-inset-bottom, 0px));
+      padding-bottom: calc(124px + env(safe-area-inset-bottom, 0px));
     }
 
     .gb-fixedbar {
@@ -865,6 +996,23 @@ const styles = `
 
     .gb-odds-main {
       font-size: 17px;
+    }
+
+    .gb-hot-grid,
+    .gb-grid-2,
+    .gb-button-row,
+    .gb-action-row,
+    .gb-bridal-buttons {
+      grid-template-columns: 1fr;
+    }
+
+    .gb-tabbar {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .gb-tab {
+      font-size: 12px;
+      padding: 9px 4px;
     }
   }
 `;
@@ -893,8 +1041,8 @@ function CardContent({ className = "", children, ...props }: React.HTMLAttribute
   return <div {...props} className={className}>{children}</div>;
 }
 
-function Badge({ className = "", children }: { className?: string; children?: React.ReactNode }) {
-  return <span className={cx("gb-badge", className)}>{children}</span>;
+function Badge({ className = "", children, ...props }: React.HTMLAttributes<HTMLSpanElement>) {
+  return <span {...props} className={cx("gb-badge", className)}>{children}</span>;
 }
 
 function Input({ className = "", ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
@@ -902,7 +1050,7 @@ function Input({ className = "", ...props }: React.InputHTMLAttributes<HTMLInput
 }
 
 function Button({ className = "", variant = "default", children, ...props }: ButtonProps) {
-  return <button {...props} className={cx("gb-button", variant === "outline" ? "gb-button--outline" : "gb-button--default", className)}>{children}</button>;
+  return <button {...props} className={cx("gb-button", variant === "outline" ? "gb-button--outline" : variant === "soft" ? "gb-button--soft" : "gb-button--default", className)}>{children}</button>;
 }
 
 function loadDraft(): { name: string; selections: Selection[] } {
@@ -965,16 +1113,6 @@ function buildSelectionsText(selections: Selection[]) {
   return selections.map((selection) => selection.option).join(" • ");
 }
 
-function getCelebrityMeta(name: string): CelebrityMeta | null {
-  const normalized = name.toLowerCase().trim();
-
-  if (normalized.includes("phoebe")) return { label: "Bride" };
-  if (normalized.includes("sophie")) return { label: "Maid of Honour" };
-  if (normalized.includes("emma")) return { label: "Mother of Bride" };
-
-  return null;
-}
-
 function getMarketCounts(bets: StoredBet[], marketId: string) {
   const counts: Record<string, number> = {};
   let total = 0;
@@ -1017,6 +1155,15 @@ function getMovement(baseOdds: string, currentOdds: string) {
   return { direction: "flat", label: "Stable", Icon: Minus as IconComponent };
 }
 
+function getBridalPartyMeta(name: string): BridalPartyMeta | null {
+  const normalized = name.toLowerCase().trim();
+  return BRIDAL_PARTY.find((person) => normalized.includes(person.key)) || null;
+}
+
+function normalizeSlipSignature(selections: Selection[]) {
+  return selections.map((selection) => `${selection.marketId}:${selection.option}`).sort().join("|");
+}
+
 function runSanityChecks() {
   console.assert(parseOdds("$2.10") === 2.1, "parseOdds should parse decimal odds");
   console.assert(formatOdds(3.456) === "$3.46", "formatOdds should round to 2 decimals");
@@ -1034,11 +1181,7 @@ if (typeof window !== "undefined") {
   runSanityChecks();
 }
 
-function MarqueeTicker({ bets }: { bets: StoredBet[] }) {
-  const items = bets.length
-    ? bets.map((bet) => `${bet.bettor_name} locked in ${bet.bet_type}: ${buildSelectionsText(bet.selections)}`)
-    : ["No bets locked in yet."];
-
+function MarqueeTicker({ items }: { items: string[] }) {
   const doubled = [...items, ...items];
 
   return (
@@ -1046,11 +1189,11 @@ function MarqueeTicker({ bets }: { bets: StoredBet[] }) {
       <motion.div
         className="gb-ticker-track"
         animate={{ x: ["0%", "-50%"] }}
-        transition={{ repeat: Infinity, ease: "linear", duration: 26 }}
+        transition={{ repeat: Infinity, ease: "linear", duration: 28 }}
       >
         {doubled.map((item, index) => (
           <div key={`${item}-${index}`} className="gb-row">
-            <Badge className="gb-badge--rose">Locked in</Badge>
+            <Badge className="gb-badge--rose">Live</Badge>
             <span>{item}</span>
           </div>
         ))}
@@ -1080,10 +1223,7 @@ function SelectionCard({
   const MovementIcon = movement.Icon;
 
   return (
-    <button
-      onClick={onClick}
-      className={cx("gb-option", active && "gb-option--active", flash && "gb-option--flash")}
-    >
+    <button onClick={onClick} className={cx("gb-option", active && "gb-option--active", flash && "gb-option--flash")}>
       <div className="gb-between">
         <div className="gb-option-copy">
           <div className="gb-option-title-row">
@@ -1156,6 +1296,48 @@ function LatestLockedCard({ bet }: { bet: StoredBet | null }) {
   );
 }
 
+function BridalPartyCard({
+  person,
+  bet,
+  onTail,
+}: {
+  person: BridalPartyMeta;
+  bet: StoredBet | null;
+  onTail: (bet: StoredBet) => void;
+}) {
+  return (
+    <div className={cx("gb-bridal-card gb-stack-2", bet && "gb-bridal-card--active")}>
+      <div className="gb-between">
+        <div className="gb-row gb-col">
+          <div className="gb-bridal-avatar">{person.display.charAt(0)}</div>
+          <div className="gb-col">
+            <div style={{ fontSize: 15, fontWeight: 800 }}>{person.display}</div>
+            <div className="gb-micro" style={{ marginTop: 4 }}>{person.role}</div>
+          </div>
+        </div>
+        <Badge className={bet ? "gb-badge--rose" : "gb-badge--stone"}>{bet ? "Slip lodged" : "Awaiting slip"}</Badge>
+      </div>
+
+      {bet ? (
+        <>
+          <div className="gb-bridal-status">{buildSelectionsText(bet.selections)}</div>
+          <div className="gb-between">
+            <div className="gb-helper">Combined odds</div>
+            <Badge className="gb-badge--white">{calcCombinedOdds(bet.selections || [])}</Badge>
+          </div>
+          <div className="gb-bridal-buttons">
+            <Button variant="soft" onClick={() => onTail(bet)}>
+              <Copy className="lucide-small" /> Tail these picks
+            </Button>
+          </div>
+        </>
+      ) : (
+        <div className="gb-helper">Awaiting their picks. Once they lock in, you can tail the slip here.</div>
+      )}
+    </div>
+  );
+}
+
 const SlipPreview = React.forwardRef<HTMLDivElement, { bet: StoredBet }>(({ bet }, ref) => {
   return (
     <div ref={ref} className="gb-confirm gb-stack-3">
@@ -1163,9 +1345,9 @@ const SlipPreview = React.forwardRef<HTMLDivElement, { bet: StoredBet }>(({ bet 
 
       <div className="gb-between">
         <div className="gb-col">
-          <div className="gb-eyebrow">Bet confirmed</div>
+          <div className="gb-eyebrow">Slip lodged</div>
           <div className="gb-title gb-serif" style={{ fontSize: 28, marginTop: 8 }}>Betting On The Wedding</div>
-          <div className="gb-subtitle">No real money. Very real bragging rights.</div>
+          <div className="gb-subtitle">For fun only. No real money will be paid out. Very real bragging rights.</div>
         </div>
         <div className="gb-slip-code">{bet.slip_code}</div>
       </div>
@@ -1218,7 +1400,7 @@ export default function GroomsdayBettingApp() {
   const [bets, setBets] = useState<StoredBet[]>([]);
   const [name, setName] = useState("");
   const [selections, setSelections] = useState<Selection[]>([]);
-  const [activeView, setActiveView] = useState<"build" | "confirmed" | "history" | "celebrity">("build");
+  const [activeView, setActiveView] = useState<"build" | "confirmed" | "history" | "bridal">("build");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [latestBet, setLatestBet] = useState<StoredBet | null>(null);
@@ -1226,7 +1408,11 @@ export default function GroomsdayBettingApp() {
   const [toast, setToast] = useState("");
   const [flashKey, setFlashKey] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
-  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+  const [pulseSlip, setPulseSlip] = useState(false);
+  const [bridalHomeOpen, setBridalHomeOpen] = useState(false);
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(UNIQUE_CATEGORIES.map((category) => [category, true]))
+  );
   const slipRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -1259,6 +1445,12 @@ export default function GroomsdayBettingApp() {
   }, [showSuccess]);
 
   useEffect(() => {
+    if (!pulseSlip) return;
+    const timer = window.setTimeout(() => setPulseSlip(false), 650);
+    return () => window.clearTimeout(timer);
+  }, [pulseSlip]);
+
+  useEffect(() => {
     void fetchBets();
 
     if (!supabase) return;
@@ -1274,13 +1466,17 @@ export default function GroomsdayBettingApp() {
       const { counts, total } = getMarketCounts(bets, market.id);
       const average = market.options.length ? total / market.options.length : 0;
 
-      return {
-        ...market,
-        options: market.options.map((option) => ({
+      const options = market.options
+        .map((option) => ({
           ...option,
           tickets: counts[option.label] || 0,
           odds: total > 0 ? getDriftedOdds(option.baseOdds, counts[option.label] || 0, average) : option.baseOdds,
-        })),
+        }))
+        .sort((a, b) => parseOdds(a.odds || a.baseOdds) - parseOdds(b.odds || b.baseOdds));
+
+      return {
+        ...market,
+        options,
       };
     });
   }, [bets]);
@@ -1311,6 +1507,103 @@ export default function GroomsdayBettingApp() {
       })
     );
   }, [markets]);
+
+  const bridalPartyEntries = useMemo(() => {
+    return BRIDAL_PARTY.map((person) => {
+      const bet = bets.find((entry) => entry.bettor_name.toLowerCase().includes(person.key)) || null;
+      return {
+        ...person,
+        bet,
+      };
+    });
+  }, [bets]);
+
+  const bridalPartyCount = useMemo(() => bridalPartyEntries.filter((entry) => !!entry.bet).length, [bridalPartyEntries]);
+
+  const myBets = useMemo(() => {
+    const normalized = lookupName.toLowerCase().trim();
+    if (!normalized) return [];
+    return bets.filter((bet) => bet.bettor_name.toLowerCase().trim().includes(normalized));
+  }, [lookupName, bets]);
+
+  const popularCombo = useMemo(() => {
+    const combos = new Map<string, { label: string; count: number }>();
+
+    bets.filter((bet) => bet.bet_type === "multi").forEach((bet) => {
+      const signature = normalizeSlipSignature(bet.selections || []);
+      const label = buildSelectionsText((bet.selections || []).slice(0, 3));
+      const existing = combos.get(signature);
+      combos.set(signature, {
+        label,
+        count: (existing?.count || 0) + 1,
+      });
+    });
+
+    return Array.from(combos.values()).sort((a, b) => b.count - a.count)[0] || null;
+  }, [bets]);
+
+  const hotInsights = useMemo(() => {
+    const marketStats = markets.map((market) => {
+      const topOption = market.options.reduce<MarketOption | null>((best, option) => {
+        if (!best) return option;
+        return (option.tickets || 0) > (best.tickets || 0) ? option : best;
+      }, null);
+
+      return {
+        market,
+        totalTickets: market.options.reduce((sum, option) => sum + (option.tickets || 0), 0),
+        topOption,
+      };
+    });
+
+    const hottestMarket = marketStats.sort((a, b) => b.totalTickets - a.totalTickets)[0] || null;
+
+    const allOptions = markets.flatMap((market) =>
+      market.options.map((option) => ({
+        marketTitle: market.title,
+        label: option.label,
+        odds: option.odds || option.baseOdds,
+        tickets: option.tickets || 0,
+      }))
+    );
+
+    const quietOutsider = allOptions
+      .filter((option) => option.tickets === 0)
+      .sort((a, b) => parseOdds(b.odds) - parseOdds(a.odds))[0] || allOptions.sort((a, b) => parseOdds(b.odds) - parseOdds(a.odds))[0] || null;
+
+    return {
+      hottestMarket,
+      quietOutsider,
+    };
+  }, [markets]);
+
+  const tickerItems = useMemo(() => {
+    const items: string[] = [];
+
+    if (latestBet) {
+      items.push(`${latestBet.bettor_name} locked in ${latestBet.bet_type}: ${buildSelectionsText(latestBet.selections)}`);
+    } else {
+      items.push("Markets are open. Build your slip and lock it in.");
+    }
+
+    bridalPartyEntries.forEach((entry) => {
+      if (entry.bet) {
+        items.push(`${entry.display} has lodged a slip at ${calcCombinedOdds(entry.bet.selections)}`);
+      } else {
+        items.push(`${entry.display} is yet to reveal their picks`);
+      }
+    });
+
+    if (hotInsights.hottestMarket?.topOption && hotInsights.hottestMarket.totalTickets > 0) {
+      items.push(`Hot right now: ${hotInsights.hottestMarket.topOption.label} is leading ${hotInsights.hottestMarket.market.title}`);
+    }
+
+    if (popularCombo && popularCombo.count > 1) {
+      items.push(`Popular multi: ${popularCombo.label} has been backed ${popularCombo.count} times`);
+    }
+
+    return items.slice(0, 8);
+  }, [latestBet, bridalPartyEntries, hotInsights, popularCombo]);
 
   async function fetchBets(showLoading = true) {
     if (showLoading) setLoading(true);
@@ -1345,6 +1638,7 @@ export default function GroomsdayBettingApp() {
     }
 
     setFlashKey(`${market.id}-${option.label}`);
+    setPulseSlip(true);
     setSelections((prev) => [
       ...prev,
       {
@@ -1354,6 +1648,11 @@ export default function GroomsdayBettingApp() {
         odds: option.odds || option.baseOdds,
       },
     ]);
+  }
+
+  function removeSelection(selection: Selection) {
+    setSelections((prev) => prev.filter((item) => !(item.marketId === selection.marketId && item.option === selection.option)));
+    setToast("Selection removed");
   }
 
   function clearSlip() {
@@ -1368,17 +1667,23 @@ export default function GroomsdayBettingApp() {
     }));
   }
 
+  function expandAllCategories() {
+    setCollapsedCategories(Object.fromEntries(UNIQUE_CATEGORIES.map((category) => [category, false])));
+  }
+
+  function collapseAllCategories() {
+    setCollapsedCategories(Object.fromEntries(UNIQUE_CATEGORIES.map((category) => [category, true])));
+  }
+
+  function loadSlipFromBet(bet: StoredBet, sourceName: string) {
+    setSelections(bet.selections || []);
+    setActiveView("build");
+    setPulseSlip(true);
+    setToast(`${sourceName}'s slip loaded`);
+  }
+
   const betType: BetType = selections.length <= 1 ? "single" : "multi";
   const combinedOdds = calcCombinedOdds(selections);
-
-  const myBets = useMemo(() => {
-    if (!lookupName.trim()) return [];
-    return bets.filter((bet) => bet.bettor_name.toLowerCase().trim() === lookupName.toLowerCase().trim());
-  }, [lookupName, bets]);
-
-  const celebrityBets = useMemo(() => {
-    return bets.filter((bet) => !!getCelebrityMeta(bet.bettor_name));
-  }, [bets]);
 
   async function submitBet() {
     if (!name.trim()) {
@@ -1458,14 +1763,26 @@ export default function GroomsdayBettingApp() {
             <div className="gb-col">
               <div className="gb-section-kicker">Groomsday</div>
               <div className="gb-title gb-serif">Betting On The Wedding</div>
-              <div className="gb-subtitle">Bragging rights edition. Build your slip and lock it in.</div>
+              <div className="gb-subtitle">Outpick the bridal party, build your single or multi, and chase bragging rights.</div>
             </div>
             <div className="gb-iconbox">
               <Ticket className="lucide-icon" />
             </div>
           </div>
 
-          <div className="gb-banner">Same Ceremony Multi Available</div>
+          <div className="gb-grid-2">
+            <div className="gb-banner gb-stack-1">
+              <div>Markets open • Bets close before the ceremony</div>
+              <div className="gb-helper" style={{ margin: 0, color: "var(--rose-800)" }}>
+                For fun only. No real money will be paid out.
+              </div>
+            </div>
+            <div className="gb-story gb-stack-1">
+              <div className="gb-label" style={{ color: "var(--rose-700)" }}>Game status</div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>Beat the bridal party</div>
+              <div className="gb-helper" style={{ margin: 0 }}>Copy a bridal party slip or back your own read.</div>
+            </div>
+          </div>
 
           <div className="gb-grid-2">
             <div className="gb-statsbox">
@@ -1473,28 +1790,95 @@ export default function GroomsdayBettingApp() {
               <div className="gb-stat-number">{bets.length}</div>
             </div>
             <div className="gb-statsbox">
-              <div className="gb-label">Live markets</div>
-              <div className="gb-stat-number">{BASE_MARKETS.length}</div>
+              <div className="gb-label">Bridal party in</div>
+              <div className="gb-stat-number">{bridalPartyCount}/3</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="gb-stack-2">
+          <button className="gb-category-toggle" onClick={() => setBridalHomeOpen((prev) => !prev)}>
+            <div className="gb-category-toggle-left">
+              <div className="gb-marketicon">
+                <Users className="lucide-small" />
+              </div>
+              <div className="gb-category-toggle-copy">
+                <div className="gb-section-kicker">Bridal Party Picks</div>
+                <div className="gb-category-toggle-title">Watch the inner circle</div>
+                <div className="gb-market-meta">{bridalPartyCount}/3 slips lodged • tap to {bridalHomeOpen ? "hide" : "view"}</div>
+              </div>
+            </div>
+            <div className="gb-row">
+              <Badge className={bridalPartyCount ? "gb-badge--rose" : "gb-badge--stone"}>{bridalPartyCount}/3 in</Badge>
+              {bridalHomeOpen ? <ChevronUp className="lucide-small" /> : <ChevronDown className="lucide-small" />}
+            </div>
+          </button>
+
+          {bridalHomeOpen ? (
+            <>
+              <div className="gb-bridal-grid">
+                {bridalPartyEntries.map((entry) => (
+                  <BridalPartyCard key={entry.key} person={entry} bet={entry.bet} onTail={(bet) => loadSlipFromBet(bet, entry.display)} />
+                ))}
+              </div>
+              <Button variant="soft" onClick={() => setActiveView("bridal")}>Open Bridal Party tab</Button>
+            </>
+          ) : null}
+        </div>
+
+        <div className="gb-stack-2">
+          <div className="gb-between">
+            <div>
+              <div className="gb-section-kicker">Hot Right Now</div>
+              <div style={{ marginTop: 4, fontSize: 18, fontWeight: 800 }}>What the room is telling you</div>
+            </div>
+            <Flame className="lucide-small" />
+          </div>
+          <div className="gb-hot-grid">
+            <div className="gb-hot-card gb-stack-1">
+              <div className="gb-label">Hot market</div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>
+                {hotInsights.hottestMarket ? hotInsights.hottestMarket.market.title : "Waiting for the first slip"}
+              </div>
+              <div className="gb-helper" style={{ margin: 0 }}>
+                {hotInsights.hottestMarket?.topOption && hotInsights.hottestMarket.totalTickets > 0
+                  ? `Most backed: ${hotInsights.hottestMarket.topOption.label}`
+                  : "No movement yet"}
+              </div>
+            </div>
+            <div className="gb-hot-card gb-stack-1">
+              <div className="gb-label">Popular multi</div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>
+                {popularCombo ? popularCombo.label : "No repeat multi yet"}
+              </div>
+              <div className="gb-helper" style={{ margin: 0 }}>
+                {popularCombo ? `Backed ${popularCombo.count} times` : "The field is still finding its read"}
+              </div>
+            </div>
+            <div className="gb-hot-card gb-stack-1">
+              <div className="gb-label">Quiet outsider</div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>
+                {hotInsights.quietOutsider ? hotInsights.quietOutsider.label : "No market yet"}
+              </div>
+              <div className="gb-helper" style={{ margin: 0 }}>
+                {hotInsights.quietOutsider ? `${hotInsights.quietOutsider.odds} • ${hotInsights.quietOutsider.marketTitle}` : "Waiting for opening action"}
+              </div>
             </div>
           </div>
         </div>
 
         <LatestLockedCard bet={latestBet} />
 
-        <MarqueeTicker bets={bets.slice(0, 14)} />
+        <MarqueeTicker items={tickerItems} />
 
-        <div className="gb-tabbar" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+        <div className="gb-tabbar">
           {[
             { key: "build", label: "Build" },
             { key: "confirmed", label: "Slip" },
+            { key: "bridal", label: bridalPartyCount ? `Bridal (${bridalPartyCount})` : "Bridal" },
             { key: "history", label: "History" },
-            { key: "celebrity", label: "Celebrity" },
           ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveView(tab.key as "build" | "confirmed" | "history" | "celebrity")}
-              className={cx("gb-tab", activeView === tab.key && "gb-tab--active")}
-            >
+            <button key={tab.key} onClick={() => setActiveView(tab.key as "build" | "confirmed" | "history" | "bridal")} className={cx("gb-tab", activeView === tab.key && "gb-tab--active")}>
               {tab.label}
             </button>
           ))}
@@ -1518,7 +1902,7 @@ export default function GroomsdayBettingApp() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className={pulseSlip ? "gb-slip-panel--pulse" : ""}>
                 <CardHeader>
                   <CardTitle className="gb-row" style={{ fontSize: 17, fontWeight: 700 }}>
                     <div className="gb-marketicon">
@@ -1531,6 +1915,7 @@ export default function GroomsdayBettingApp() {
                   <div className="gb-row">
                     <Badge className={betType === "single" ? "gb-badge--rose" : "gb-badge--stone"}>Single</Badge>
                     <Badge className={betType === "multi" ? "gb-badge--rose" : "gb-badge--stone"}>Multi</Badge>
+                    {selections.length ? <Badge className="gb-badge--success">{selections.length} selected</Badge> : null}
                   </div>
 
                   <div className="gb-softbox gb-stack-2" style={{ background: "var(--stone-50)", borderColor: "var(--stone-200)", color: "var(--stone-900)" }}>
@@ -1554,9 +1939,10 @@ export default function GroomsdayBettingApp() {
                   <div className="gb-selection-scroll">
                     {selections.length ? (
                       selections.map((item) => (
-                        <Badge key={`${item.marketId}-${item.option}`} className="gb-badge--selected">
-                          {item.option} {item.odds}
-                        </Badge>
+                        <button key={`${item.marketId}-${item.option}`} className="gb-chip-button" onClick={() => removeSelection(item)}>
+                          <span>{item.option} {item.odds}</span>
+                          <Trash2 className="lucide-small" />
+                        </button>
                       ))
                     ) : (
                       <div className="gb-muted" style={{ fontSize: 14 }}>Build your slip to get started</div>
@@ -1565,17 +1951,29 @@ export default function GroomsdayBettingApp() {
                 </CardContent>
               </Card>
 
+              <div className="gb-action-row">
+                <Button variant="soft" onClick={expandAllCategories}>Expand all</Button>
+                <Button variant="soft" onClick={collapseAllCategories}>Collapse all</Button>
+              </div>
+
               {Object.entries(groupedMarkets).map(([category, categoryMarkets]) => {
                 const isCollapsed = !!collapsedCategories[category];
                 const totalCategoryMarkets = categoryMarkets.length;
+                const selectedInCategory = selections.filter((selection) => categoryMarkets.some((market) => market.id === selection.marketId)).length;
+                const CategoryIcon = CATEGORY_ICONS[category] || Ticket;
 
                 return (
                   <div key={category} className="gb-stack-2">
                     <button className="gb-category-toggle" onClick={() => toggleCategory(category)}>
                       <div className="gb-category-toggle-left">
-                        <div className="gb-category">Section</div>
-                        <div className="gb-category-toggle-title">{category}</div>
-                        <div className="gb-market-meta">{totalCategoryMarkets} market{totalCategoryMarkets === 1 ? "" : "s"}</div>
+                        <div className="gb-marketicon">
+                          <CategoryIcon className="lucide-small" />
+                        </div>
+                        <div className="gb-category-toggle-copy">
+                          <div className="gb-category-toggle-title">{category}</div>
+                          <div className="gb-market-meta">{totalCategoryMarkets} market{totalCategoryMarkets === 1 ? "" : "s"} • {selectedInCategory} pick{selectedInCategory === 1 ? "" : "s"}</div>
+                          <div className="gb-helper" style={{ margin: 0 }}>{isCollapsed ? "Tap to view markets" : "Tap to hide markets"}</div>
+                        </div>
                       </div>
                       {isCollapsed ? <ChevronDown className="lucide-small" /> : <ChevronUp className="lucide-small" />}
                     </button>
@@ -1584,6 +1982,10 @@ export default function GroomsdayBettingApp() {
                       const Icon = market.icon;
                       const selectedCount = selections.filter((item) => item.marketId === market.id).length;
                       const marketTickets = market.options.reduce((sum, option) => sum + (option.tickets || 0), 0);
+                      const mostBacked = market.options.reduce<MarketOption | null>((best, option) => {
+                        if (!best) return option;
+                        return (option.tickets || 0) > (best.tickets || 0) ? option : best;
+                      }, null);
 
                       return (
                         <Card key={market.id}>
@@ -1596,11 +1998,14 @@ export default function GroomsdayBettingApp() {
                                 <div className="gb-col">
                                   <div className="gb-label">{category} • Market {idx + 1}</div>
                                   <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700, lineHeight: 1.25 }}>{market.title}</div>
+                                  <div className="gb-market-meta">
+                                    {mostBacked && (mostBacked.tickets || 0) > 0 ? `Most backed: ${mostBacked.label}` : formatTicketCount(marketTickets)}
+                                  </div>
                                 </div>
                               </div>
                               <div style={{ textAlign: "right" }}>
-                                {selectedCount > 0 ? <Badge className="gb-badge--selected">{selectedCount} selected</Badge> : null}
-                                <div className="gb-micro" style={{ marginTop: 8 }}>{formatTicketCount(marketTickets)}</div>
+                                {market.spotlight ? <Badge className="gb-badge--spotlight">Spotlight</Badge> : null}
+                                {selectedCount > 0 ? <div style={{ marginTop: market.spotlight ? 8 : 0 }}><Badge className="gb-badge--selected">{selectedCount} selected</Badge></div> : null}
                               </div>
                             </CardTitle>
                           </CardHeader>
@@ -1657,6 +2062,23 @@ export default function GroomsdayBettingApp() {
             </motion.div>
           )}
 
+          {activeView === "bridal" && (
+            <motion.div key="bridal" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="gb-stack-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle style={{ fontSize: 17, fontWeight: 700 }}>Bridal Party Picks</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="gb-helper">Watch the bridal party, copy their picks, or try to beat them with your own read.</div>
+                </CardContent>
+              </Card>
+
+              {bridalPartyEntries.map((entry) => (
+                <BridalPartyCard key={entry.key} person={entry} bet={entry.bet} onTail={(bet) => loadSlipFromBet(bet, entry.display)} />
+              ))}
+            </motion.div>
+          )}
+
           {activeView === "history" && (
             <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="gb-stack-3">
               <Card>
@@ -1688,6 +2110,12 @@ export default function GroomsdayBettingApp() {
                       <div style={{ fontSize: 14 }}>{buildSelectionsText(bet.selections)}</div>
                     </div>
 
+                    <div className="gb-history-actions">
+                      <Button variant="soft" onClick={() => loadSlipFromBet(bet, bet.bettor_name)}>
+                        <Copy className="lucide-small" /> Reuse this slip
+                      </Button>
+                    </div>
+
                     <div className="gb-stack-2">
                       {(bet.selections || []).map((item, index) => (
                         <div key={`${bet.slip_code}-${index}`} className="gb-leg gb-stack-1">
@@ -1707,70 +2135,12 @@ export default function GroomsdayBettingApp() {
               )}
             </motion.div>
           )}
-
-          {activeView === "celebrity" && (
-            <motion.div key="celebrity" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="gb-stack-3">
-              <Card>
-                <CardHeader>
-                  <CardTitle style={{ fontSize: 17, fontWeight: 700 }}>Celebrity Bets</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="gb-helper">Featured slips from the wedding inner circle.</div>
-                </CardContent>
-              </Card>
-
-              {loading ? (
-                <EmptyState title="Loading celebrity bets" body="Pulling featured slips from the cloud." />
-              ) : celebrityBets.length ? (
-                celebrityBets.map((bet) => {
-                  const celebrityMeta = getCelebrityMeta(bet.bettor_name);
-
-                  return (
-                    <div key={`celebrity-${bet.id || bet.slip_code}`} className="gb-history-card gb-stack-2">
-                      <div className="gb-between">
-                        <div className="gb-col">
-                          <div className="gb-row" style={{ gap: 8, flexWrap: "wrap" }}>
-                            <div style={{ fontSize: 14, fontWeight: 700 }}>{bet.bettor_name}</div>
-                            {celebrityMeta ? <Badge className="gb-badge--rose">{celebrityMeta.label}</Badge> : null}
-                          </div>
-                          <div className="gb-micro" style={{ marginTop: 6 }}>
-                            {bet.bet_type} • {formatTime(bet.created_at)}
-                          </div>
-                        </div>
-                        <Badge className="gb-badge--selected">{calcCombinedOdds(bet.selections || [])}</Badge>
-                      </div>
-
-                      <div className="gb-softbox gb-stack-1">
-                        <div className="gb-label" style={{ color: "var(--rose-700)" }}>Selections</div>
-                        <div style={{ fontSize: 14 }}>{buildSelectionsText(bet.selections)}</div>
-                      </div>
-
-                      <div className="gb-stack-2">
-                        {(bet.selections || []).map((item, index) => (
-                          <div key={`${bet.slip_code}-celeb-${index}`} className="gb-leg gb-stack-1">
-                            <div className="gb-label">Leg {index + 1}</div>
-                            <div style={{ fontSize: 14, fontWeight: 600 }}>{item.marketTitle}</div>
-                            <div className="gb-between">
-                              <div style={{ fontSize: 14, color: "var(--rose-900)" }}>{item.option}</div>
-                              <div className="gb-muted" style={{ fontSize: 14 }}>{item.odds}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <EmptyState title="No celebrity bets yet" body="Once Phoebe, Sophie, or Emma lock in a slip, it will show here." />
-              )}
-            </motion.div>
-          )}
         </AnimatePresence>
       </div>
 
       <div className="gb-fixedbar">
         <div className="gb-fixedbar-inner">
-          <div className="gb-slip-panel gb-stack-2">
+          <div className={cx("gb-slip-panel gb-stack-2", pulseSlip && "gb-slip-panel--pulse")}>
             <div className="gb-between">
               <div>
                 <div className="gb-label">Bet slip</div>
