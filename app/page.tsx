@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
 import { createClient } from "@supabase/supabase-js";
-import { Inter, Cormorant_Garamond } from "next/font/google";
+import { Geist, Fraunces } from "next/font/google";
 import {
   Trophy,
   User,
@@ -112,15 +112,14 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "default" | "outline" | "soft";
 };
 
-const inter = Inter({
+const geist = Geist({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-geist",
 });
 
-const cormorant = Cormorant_Garamond({
+const fraunces = Fraunces({
   subsets: ["latin"],
-  weight: ["600", "700"],
-  variable: "--font-cormorant",
+  variable: "--font-fraunces",
 });
 
 const supabaseUrl = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined;
@@ -369,7 +368,10 @@ const styles = `
     min-height: 100vh;
     color: var(--stone-900);
     background: radial-gradient(circle at top, rgba(251, 207, 232, 0.58), transparent 32%), linear-gradient(180deg, #fff9f8 0%, #faf7f6 100%);
-    font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font-geist), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
   .gb-app button,
@@ -378,7 +380,7 @@ const styles = `
   }
 
   .gb-serif {
-    font-family: var(--font-cormorant), Iowan Old Style, Palatino Linotype, Book Antiqua, Georgia, serif;
+    font-family: var(--font-fraunces), Iowan Old Style, Palatino Linotype, Book Antiqua, Georgia, serif;
   }
 
   .lucide-small {
@@ -477,7 +479,7 @@ const styles = `
   .gb-micro,
   .gb-section-kicker {
     text-transform: uppercase;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.12em;
     font-size: 10px;
   }
 
@@ -489,10 +491,10 @@ const styles = `
 
   .gb-title {
     margin: 4px 0 0;
-    font-size: 33px;
-    line-height: 0.94;
+    font-size: 32px;
+    line-height: 0.98;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
     color: var(--stone-900);
   }
 
@@ -502,7 +504,7 @@ const styles = `
   .gb-empty-body,
   .gb-soft-muted { color: var(--stone-500); }
 
-  .gb-subtitle { margin: 4px 0 0; font-size: 13px; line-height: 1.45; }
+  .gb-subtitle { margin: 6px 0 0; font-size: 13px; line-height: 1.5; max-width: 34ch; }
   .gb-helper { margin: 6px 0 0; font-size: 12px; }
   .gb-empty-body { margin: 6px 0 0; font-size: 14px; }
 
@@ -599,6 +601,7 @@ const styles = `
     font-size: 20px;
     font-weight: 800;
     color: var(--stone-900);
+    font-variant-numeric: tabular-nums;
   }
 
   .gb-ticker {
@@ -651,8 +654,9 @@ const styles = `
     border-radius: 15px;
     background: transparent;
     color: var(--stone-500);
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
     padding: 10px 6px;
     cursor: pointer;
   }
@@ -709,8 +713,9 @@ const styles = `
   }
 
   .gb-category-toggle-title {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
+    letter-spacing: -0.01em;
     color: var(--stone-900);
   }
 
@@ -752,7 +757,8 @@ const styles = `
   .gb-option-title {
     font-size: 13px;
     font-weight: 700;
-    line-height: 1.32;
+    line-height: 1.36;
+    letter-spacing: -0.005em;
     color: var(--stone-900);
     flex: 1 1 auto;
   }
@@ -794,6 +800,7 @@ const styles = `
     font-size: 18px;
     font-weight: 800;
     line-height: 1;
+    font-variant-numeric: tabular-nums;
   }
 
   .gb-odds-sub {
@@ -991,6 +998,7 @@ const styles = `
   .gb-bridal-name {
     font-size: 15px;
     font-weight: 800;
+    letter-spacing: -0.01em;
   }
 
   .gb-bridal-role {
@@ -1001,8 +1009,7 @@ const styles = `
     font-size: 11px;
     font-weight: 700;
     color: var(--stone-500);
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.04em;
   }
 
   .gb-hot-grid {
@@ -1157,6 +1164,14 @@ function calcCombinedOdds(selections: Selection[]) {
 function buildSelectionsText(selections: Selection[]) {
   if (!selections?.length) return "Build your slip to get started";
   return selections.map((selection) => selection.option).join(" • ");
+}
+
+function buildSelectionsContextText(selections: Selection[], limit = 3) {
+  if (!selections?.length) return "No slip yet";
+  return selections
+    .slice(0, limit)
+    .map((selection) => `${selection.marketTitle}: ${selection.option}`)
+    .join(" • ");
 }
 
 function getMarketCounts(bets: StoredBet[], marketId: string) {
@@ -1595,7 +1610,7 @@ export default function GroomsdayBettingApp() {
 
     bets.filter((bet) => bet.bet_type === "multi").forEach((bet) => {
       const signature = normalizeSlipSignature(bet.selections || []);
-      const label = buildSelectionsText((bet.selections || []).slice(0, 3));
+      const label = buildSelectionsContextText(bet.selections || [], 3);
       const existing = combos.get(signature);
       combos.set(signature, {
         label,
@@ -1816,7 +1831,7 @@ export default function GroomsdayBettingApp() {
   }
 
   return (
-    <div className={cx(inter.variable, cormorant.variable, "gb-app")}>
+    <div className={cx(geist.variable, fraunces.variable, "gb-app")}>
       <style>{styles}</style>
 
       <div className="gb-topbar gb-serif">Wedding Specials</div>
@@ -1868,7 +1883,7 @@ export default function GroomsdayBettingApp() {
               </div>
               <div className="gb-category-toggle-copy">
                 <div className="gb-section-kicker">Bridal Party Picks</div>
-                <div className="gb-category-toggle-title gb-serif">Watch the inner circle</div>
+                <div className="gb-category-toggle-title">Watch the inner circle</div>
                 <div className="gb-market-meta">{bridalPartyCount}/3 slips lodged • tap to {bridalHomeOpen ? "hide" : "view"}</div>
               </div>
             </div>
