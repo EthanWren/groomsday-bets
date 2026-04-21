@@ -95,8 +95,10 @@ function getRandomQuickStartIds() {
 
 const INNER_CIRCLE: InnerCircleMeta[] = [
   { key: "abbie", display: "Abbie", role: "Sister of the Groom" },
+  { key: "jemima", display: "Jemima", role: "Other Sister of the Groom" },
   { key: "sophie", display: "Sophie", role: "Maid of Honour" },
   { key: "emma", display: "Emma", role: "Mother of Bride" },
+  { key: "kirsten", display: "Kirsten", role: "Mother of the Groom" },
 ];
 
 const BASE_MARKETS: Market[] = [
@@ -338,9 +340,9 @@ const CATEGORY_ICONS: Record<string, IconComponent> = {
 
 const QUICK_START_LABEL = "Quick Start";
 const ALL_LABEL = "All Markets";
-const CELEBS_LABEL = "Celeb Bettors";
+const CELEBS_LABEL = "VIP Picks";
 const ALL_MARKET_CATEGORIES = Array.from(new Set(BASE_MARKETS.map((market) => market.category)));
-const SECTION_OPTIONS = [QUICK_START_LABEL, ALL_LABEL, CELEBS_LABEL];
+const SECTION_OPTIONS = [ALL_LABEL, CELEBS_LABEL];
 
 const styles = `
   :root {
@@ -371,6 +373,8 @@ const styles = `
     --stone-700: #44403c;
     --stone-900: #1c1917;
     --white: #ffffff;
+    --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Avenir Next", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
     --shadow-sm: 0 8px 18px rgba(28, 25, 23, 0.05);
     --shadow-lg: 0 14px 28px rgba(28, 25, 23, 0.07);
     --shadow-xl: 0 18px 40px rgba(28, 25, 23, 0.11);
@@ -387,8 +391,9 @@ const styles = `
     background:
       radial-gradient(circle at top, rgba(251, 207, 232, 0.55), transparent 32%),
       linear-gradient(180deg, #fff9f8 0%, #faf7f6 100%);
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font-body);
     line-height: 1.45;
+    letter-spacing: -0.012em;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -397,7 +402,9 @@ const styles = `
   .gb-app input { font: inherit; }
 
   .gb-serif {
-    font-family: Iowan Old Style, Palatino Linotype, Book Antiqua, Georgia, serif;
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.045em;
   }
 
   .lucide-small { width: 16px; height: 16px; flex: 0 0 16px; }
@@ -410,9 +417,9 @@ const styles = `
     padding: 10px 16px;
     text-align: center;
     text-transform: uppercase;
-    letter-spacing: 0.26em;
+    letter-spacing: 0.16em;
     font-size: 10px;
-    font-weight: 800;
+    font-weight: 700;
     color: var(--rose-900);
     background: rgba(255, 241, 245, 0.9);
     border-bottom: 1px solid var(--rose-200);
@@ -423,7 +430,7 @@ const styles = `
     max-width: 460px;
     margin: 0 auto;
     min-height: 100vh;
-    padding: 14px 14px calc(116px + env(safe-area-inset-bottom, 0px));
+    padding: 14px 14px calc(88px + env(safe-area-inset-bottom, 0px));
   }
 
   .gb-stack-1 > * + * { margin-top: 6px; }
@@ -486,10 +493,10 @@ const styles = `
 
   .gb-title {
     margin: 4px 0 0;
-    font-size: 31px;
-    line-height: 0.98;
-    font-weight: 600;
-    letter-spacing: -0.015em;
+    font-size: 32px;
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: -0.05em;
     color: var(--stone-900);
   }
 
@@ -534,6 +541,16 @@ const styles = `
     color: var(--sage-700);
   }
 
+  .gb-inner-avatar--jemima {
+    background: linear-gradient(180deg, var(--mauve-100) 0%, #fff7ff 100%);
+    color: var(--mauve-700);
+  }
+
+  .gb-inner-avatar--kirsten {
+    background: linear-gradient(180deg, var(--rose-50) 0%, var(--rose-25) 100%);
+    color: var(--rose-800);
+  }
+
   .gb-banner,
   .gb-softbox,
   .gb-badge,
@@ -562,7 +579,7 @@ const styles = `
 
   .gb-summary-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
@@ -571,7 +588,7 @@ const styles = `
   .gb-summary-value {
     margin-top: 8px;
     font-size: 18px;
-    font-weight: 800;
+    font-weight: 700;
     color: var(--stone-900);
     font-variant-numeric: tabular-nums;
   }
@@ -689,9 +706,9 @@ const styles = `
   .gb-market-title {
     margin-top: 4px;
     font-size: 16px;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1.25;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
   }
 
   .gb-market-body {
@@ -818,7 +835,7 @@ const styles = `
 
   .gb-chip-button:hover { box-shadow: var(--shadow-sm); }
 
-  .gb-fixedbar {
+  .gb-slip-fab-wrap {
     position: fixed;
     left: 0;
     right: 0;
@@ -828,17 +845,89 @@ const styles = `
     pointer-events: none;
   }
 
-  .gb-fixedbar-inner {
+  .gb-slip-fab-inner {
     max-width: 460px;
     margin: 0 auto;
     pointer-events: auto;
   }
 
+  .gb-slip-fab {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--stone-200);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.98);
+    box-shadow: var(--shadow-xl);
+    cursor: pointer;
+    transition: transform 160ms ease, box-shadow 160ms ease;
+  }
+
+  .gb-slip-fab:hover { box-shadow: var(--shadow-xl); }
+  .gb-slip-fab:active { transform: scale(0.99); }
+  .gb-slip-fab--pulse {
+    box-shadow: 0 0 0 1px rgba(190,24,93,0.12), var(--shadow-xl);
+    transform: translateY(-2px);
+  }
+
+  .gb-slip-fab-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+  }
+
+  .gb-slip-fab-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--stone-900);
+    letter-spacing: -0.02em;
+  }
+
+  .gb-slip-fab-subtitle {
+    font-size: 12px;
+    color: var(--stone-500);
+  }
+
   .gb-slip-panel {
     background: rgba(255,255,255,0.98);
-    padding: 12px;
+    padding: 14px;
     transition: box-shadow 160ms ease, transform 160ms ease;
     box-shadow: var(--shadow-xl);
+  }
+
+  .gb-slip-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 44;
+    background: rgba(28, 25, 23, 0.22);
+    backdrop-filter: blur(2px);
+  }
+
+  .gb-slip-drawer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    padding: 0 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .gb-slip-drawer-inner {
+    max-width: 460px;
+    margin: 0 auto;
+  }
+
+  .gb-slip-drawer-handle {
+    width: 44px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--stone-300);
+    margin: 0 auto 12px;
   }
 
   .gb-slip-panel--pulse {
@@ -989,8 +1078,8 @@ const styles = `
 
   .gb-category-toggle-title {
     font-size: 15px;
-    font-weight: 800;
-    letter-spacing: -0.01em;
+    font-weight: 700;
+    letter-spacing: -0.02em;
     color: var(--stone-900);
   }
 
@@ -1037,10 +1126,11 @@ const styles = `
     .gb-page {
       padding-left: 12px;
       padding-right: 12px;
-      padding-bottom: calc(122px + env(safe-area-inset-bottom, 0px));
+      padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
     }
 
-    .gb-fixedbar {
+    .gb-slip-fab-wrap,
+    .gb-slip-drawer {
       padding-left: 12px;
       padding-right: 12px;
     }
@@ -1219,7 +1309,9 @@ function getMovement(baseOdds: string, currentOdds: string) {
 
 function getInnerCircleIcon(person: InnerCircleMeta): IconComponent {
   if (person.key === "abbie") return Users;
+  if (person.key === "jemima") return Crown;
   if (person.key === "sophie") return Sparkles;
+  if (person.key === "kirsten") return Heart;
   return Heart;
 }
 
@@ -1327,8 +1419,10 @@ function InnerCircleCard({
             className={cx(
               "gb-inner-avatar",
               person.key === "abbie" && "gb-inner-avatar--abbie",
+              person.key === "jemima" && "gb-inner-avatar--jemima",
               person.key === "sophie" && "gb-inner-avatar--sophie",
-              person.key === "emma" && "gb-inner-avatar--emma"
+              person.key === "emma" && "gb-inner-avatar--emma",
+              person.key === "kirsten" && "gb-inner-avatar--kirsten"
             )}
           >
             <RoleIcon className="lucide-small" />
@@ -1427,7 +1521,7 @@ export default function GroomsdayBettingApp() {
   const [name, setName] = useState("");
   const [selections, setSelections] = useState<Selection[]>([]);
   const [activeView, setActiveView] = useState<View>("build");
-  const [activeSection, setActiveSection] = useState<string>(QUICK_START_LABEL);
+  const [activeSection, setActiveSection] = useState<string>(ALL_LABEL);
   const [quickStartIds, setQuickStartIds] = useState<string[]>(() => getRandomQuickStartIds());
   const [collapsedAllMarkets, setCollapsedAllMarkets] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(ALL_MARKET_CATEGORIES.map((category) => [category, true]))
@@ -1442,6 +1536,7 @@ export default function GroomsdayBettingApp() {
   const [pulseSlip, setPulseSlip] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
+  const [slipOpen, setSlipOpen] = useState(false);
   const slipRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -1657,7 +1752,7 @@ export default function GroomsdayBettingApp() {
       return;
     }
     setHasStarted(true);
-    setToast("Start with the quick markets below");
+    setToast("Pick from any market below");
   }
 
   function toggleSelection(market: Market, option: MarketOption) {
@@ -1689,6 +1784,7 @@ export default function GroomsdayBettingApp() {
 
   function clearSlip() {
     setSelections([]);
+    setSlipOpen(false);
     setToast("Slip cleared");
   }
 
@@ -1704,6 +1800,7 @@ export default function GroomsdayBettingApp() {
     setHasStarted(true);
     setActiveView("build");
     setPulseSlip(true);
+    setSlipOpen(false);
     setToast(`${sourceName}'s slip loaded`);
   }
 
@@ -1746,6 +1843,7 @@ export default function GroomsdayBettingApp() {
     setBets((prev) => [saved, ...prev]);
     setLatestBet(saved);
     setShowSuccess(true);
+    setSlipOpen(false);
     setActiveView("confirmed");
     setToast("Bet locked in");
   }
@@ -1770,8 +1868,10 @@ export default function GroomsdayBettingApp() {
     setName("");
     setSelections([]);
     setHasStarted(false);
+    setSlipOpen(false);
     setActiveView("build");
-    setActiveSection(QUICK_START_LABEL);
+    setActiveSection(ALL_LABEL);
+    setCollapsedAllMarkets(Object.fromEntries(ALL_MARKET_CATEGORIES.map((category) => [category, true])));
     setQuickStartIds(getRandomQuickStartIds());
     saveDraft({ name: "", selections: [] });
     setToast("Ready for the next bettor");
@@ -1789,8 +1889,7 @@ export default function GroomsdayBettingApp() {
             <div className="gb-col">
               <div className="gb-section-kicker">Groomsday</div>
               <div className="gb-title gb-serif">Betting On The Wedding</div>
-              <div className="gb-subtitle">Simple, cheeky, and easy to play. Enter your name, tap a few markets, then lock your slip.</div>
-            </div>
+                          </div>
             <div className="gb-iconbox">
               <Ticket className="lucide-icon" />
             </div>
@@ -1806,13 +1905,6 @@ export default function GroomsdayBettingApp() {
                 <div className="gb-label">Slips</div>
               </div>
               <div className="gb-summary-value">{bets.length}</div>
-            </div>
-            <div className="gb-summary-card">
-              <div className="gb-row">
-                <div className="gb-stat-icon"><Users className="lucide-small" /></div>
-                <div className="gb-label">Inner circle</div>
-              </div>
-              <div className="gb-summary-value">{innerCircleCount}/3</div>
             </div>
             <div className="gb-summary-card">
               <div className="gb-row">
@@ -1892,7 +1984,7 @@ export default function GroomsdayBettingApp() {
                   <Button variant="soft" onClick={() => setShowInsights((prev) => !prev)}>
                     <Flame className="lucide-small" /> {showInsights ? "Hide live pulse" : "Show live pulse"}
                   </Button>
-                  <Button variant="soft" onClick={() => setActiveView("inner")}>Inner circle picks</Button>
+                  <Button variant="soft" onClick={() => setActiveView("inner")}>VIP picks</Button>
                 </div>
 
                 {showInsights ? (
@@ -2063,19 +2155,6 @@ export default function GroomsdayBettingApp() {
                     })}
                   </div>
                 )}
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="gb-row" style={{ fontSize: 16, fontWeight: 800 }}>
-                      <ChevronRight className="lucide-small" />
-                      <span>More options</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="gb-secondary-actions">
-                    <Button variant="soft" onClick={() => setActiveView("inner")}>View Inner Circle picks</Button>
-                    <Button variant="soft" onClick={() => setActiveView("history")}>Find my saved bets</Button>
-                  </CardContent>
-                </Card>
               </motion.div>
             )}
 
@@ -2120,15 +2199,15 @@ export default function GroomsdayBettingApp() {
                 <div className="gb-sheet">
                   <div className="gb-sheet-header">
                     <div>
-                      <div className="gb-section-kicker">Inner circle</div>
-                      <div style={{ marginTop: 2, fontSize: 16, fontWeight: 800 }}>Picks to watch</div>
+                      <div className="gb-section-kicker">VIP picks</div>
+                      <div style={{ marginTop: 2, fontSize: 16, fontWeight: 800 }}>Wedding favourites</div>
                     </div>
                     <Button variant="soft" onClick={() => setActiveView("build")}>
                       <ChevronLeft className="lucide-small" /> Back
                     </Button>
                   </div>
                   <div className="gb-sheet-body gb-stack-3">
-                    <div className="gb-helper">Copy a slip from the inner circle or use it as a guide.</div>
+                    <div className="gb-helper">See what the wedding VIPs are backing, then copy a slip if you like it.</div>
                     <div className="gb-inner-grid">
                       {innerCircleEntries.map((entry) => (
                         <InnerCircleCard key={entry.key} person={entry} bet={entry.bet} onTail={(bet) => loadSlipFromBet(bet, entry.display)} />
@@ -2189,31 +2268,86 @@ export default function GroomsdayBettingApp() {
         ) : null}
       </div>
 
-      {hasStarted && activeView === "build" ? (
-        <div className="gb-fixedbar">
-          <div className="gb-fixedbar-inner">
-            <div className={cx("gb-slip-panel gb-stack-2", pulseSlip && "gb-slip-panel--pulse")}>
-              <div className="gb-between">
-                <div>
-                  <div className="gb-section-kicker">Step 3</div>
-                  <div style={{ marginTop: 4, fontSize: 13, fontWeight: 700 }}>
-                    {selections.length} leg{selections.length === 1 ? "" : "s"} • {betType}
-                  </div>
-                </div>
-                <Badge className="gb-badge--selected">{combinedOdds}</Badge>
+      {hasStarted && activeView === "build" && selections.length > 0 ? (
+        <div className="gb-slip-fab-wrap">
+          <div className="gb-slip-fab-inner">
+            <button className={cx("gb-slip-fab", pulseSlip && "gb-slip-fab--pulse")} onClick={() => setSlipOpen(true)}>
+              <div className="gb-slip-fab-copy">
+                <div className="gb-section-kicker">Review slip</div>
+                <div className="gb-slip-fab-title">{selections.length} leg{selections.length === 1 ? "" : "s"} • {betType}</div>
+                <div className="gb-slip-fab-subtitle">Tap to clear or lock your bet</div>
               </div>
-              <div className="gb-button-row">
-                <Button onClick={clearSlip} variant="outline">
-                  <Trash2 className="lucide-small" /> Clear
-                </Button>
-                <Button onClick={submitBet} disabled={submitting}>
-                  {submitting ? "Saving..." : `Lock ${betType}`}
-                </Button>
-              </div>
-            </div>
+              <Badge className="gb-badge--selected">{combinedOdds}</Badge>
+            </button>
           </div>
         </div>
       ) : null}
+
+      <AnimatePresence>
+        {hasStarted && activeView === "build" && slipOpen ? (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="gb-slip-backdrop"
+              onClick={() => setSlipOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 24 }}
+              className="gb-slip-drawer"
+            >
+              <div className="gb-slip-drawer-inner">
+                <div className="gb-slip-panel gb-stack-2">
+                  <div className="gb-slip-drawer-handle" />
+                  <div className="gb-between">
+                    <div>
+                      <div className="gb-section-kicker">Review slip</div>
+                      <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700 }}>
+                        {selections.length} leg{selections.length === 1 ? "" : "s"} • {betType}
+                      </div>
+                    </div>
+                    <Button variant="soft" onClick={() => setSlipOpen(false)}>
+                      Done
+                    </Button>
+                  </div>
+
+                  <div className="gb-softbox gb-stack-2" style={{ background: "var(--stone-50)", borderColor: "var(--stone-200)", color: "var(--stone-900)" }}>
+                    <div className="gb-between">
+                      <div>
+                        <div className="gb-label">Combined odds</div>
+                        <div style={{ marginTop: 4, fontSize: 18, fontWeight: 700, color: "var(--rose-900)" }}>{combinedOdds}</div>
+                      </div>
+                      <Badge className="gb-badge--selected">{betType}</Badge>
+                    </div>
+                    <div className="gb-helper" style={{ margin: 0 }}>Your current selections are ready to lock in.</div>
+                  </div>
+
+                  <div className="gb-selection-scroll">
+                    {selections.map((item) => (
+                      <button key={`${item.marketId}-${item.option}`} className="gb-chip-button" onClick={() => removeSelection(item)}>
+                        <span>{item.option} {item.odds}</span>
+                        <Trash2 className="lucide-small" />
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="gb-button-row">
+                    <Button onClick={clearSlip} variant="outline">
+                      <Trash2 className="lucide-small" /> Clear
+                    </Button>
+                    <Button onClick={submitBet} disabled={submitting}>
+                      {submitting ? "Saving..." : `Lock ${betType}`}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        ) : null}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showSuccess ? (
