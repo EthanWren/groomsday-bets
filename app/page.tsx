@@ -576,23 +576,6 @@ const styles = `
   }
 
   .gb-banner { text-align: left; font-size: 13px; font-weight: 700; }
-
-  .gb-summary-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .gb-summary-card { padding: 12px; }
-
-  .gb-summary-value {
-    margin-top: 8px;
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--stone-900);
-    font-variant-numeric: tabular-nums;
-  }
-
   .gb-start-box {
     display: grid;
     gap: 10px;
@@ -1136,9 +1119,7 @@ const styles = `
     }
 
     .gb-title { font-size: 28px; }
-
     .gb-grid-2,
-    .gb-summary-grid,
     .gb-button-row,
     .gb-action-row,
     .gb-secondary-actions,
@@ -1897,22 +1878,6 @@ export default function GroomsdayBettingApp() {
           <div className="gb-banner gb-stack-1">
             <div>For fun only. No real money will be paid out.</div>
             <div className="gb-helper" style={{ margin: 0, color: "var(--rose-800)" }}>Build a single or a multi and chase bragging rights.</div>
-          </div>
-          <div className="gb-summary-grid">
-            <div className="gb-summary-card">
-              <div className="gb-row">
-                <div className="gb-stat-icon"><Receipt className="lucide-small" /></div>
-                <div className="gb-label">Slips</div>
-              </div>
-              <div className="gb-summary-value">{bets.length}</div>
-            </div>
-            <div className="gb-summary-card">
-              <div className="gb-row">
-                <div className="gb-stat-icon"><Trophy className="lucide-small" /></div>
-                <div className="gb-label">Mode</div>
-              </div>
-              <div className="gb-summary-value">{selections.length > 1 ? "Multi" : "Single"}</div>
-            </div>
           </div>
         </div>
 
